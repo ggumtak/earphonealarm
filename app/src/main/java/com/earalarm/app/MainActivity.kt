@@ -1,7 +1,6 @@
 package com.earalarm.app
 
 import android.Manifest
-import android.app.NotificationManager
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.net.Uri
@@ -22,6 +21,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.earalarm.app.data.local.AlarmEntity
 import com.earalarm.app.data.local.CustomSoundEntity
@@ -63,11 +64,27 @@ private fun Home() {
         catch (e: Exception) { error = e.message ?: "작업을 완료하지 못했어요" }
     }; Unit }
     LaunchedEffect(Unit) { run { app.scheduler.restore() } }
+    // Without notifications the silent "no earphone" alert and the full-screen stop button never appear.
+    var notificationsOn by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        notificationsOn = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+    LifecycleResumeEffect(Unit) {
+        notificationsOn = NotificationManagerCompat.from(context).areNotificationsEnabled()
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(Unit) { if (Build.VERSION.SDK_INT >= 33 && !notificationsOn) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
     Scaffold { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Spacer(Modifier.height(8.dp))
             Text("이어폰 알람", style = MaterialTheme.typography.headlineLarge)
             EarphoneStatusChip(state = state)
+            if (!notificationsOn) Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("알림이 꺼져 있어요. 이어폰이 없을 때의 무음 알림과 알람 끄기 화면이 표시되지 않아요.")
+                    OutlinedButton(onClick = { run { context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)) } }) { Text("알림 허용하기") }
+                }
+            }
             if (active != null) Button(onClick = { context.startActivity(Intent(context, AlarmRingingActivity::class.java).putExtra("id", active!!)) }) { Text("울리는 알람 열기") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("타이머", "알람", "설정").forEachIndexed { index, text ->
@@ -115,7 +132,7 @@ private fun TimerPanel(run: (suspend () -> Unit) -> Unit) {
     var running by remember { mutableStateOf(scheduler.timerRunning()) }
     LaunchedEffect(Unit) { while (true) { remaining = scheduler.timerRemaining(); running = scheduler.timerRunning(); delay(250) } }
     val seconds = (remaining + 999) / 1000
-    Text(if (remaining > 0) "%02d:%02d:%02d".format(seconds / 3600, seconds / 60 % 60, seconds % 60) else "${minutes.ifEmpty { "0" }} min", style = MaterialTheme.typography.displayMedium)
+    Text(if (remaining > 0) "%02d:%02d:%02d".format(seconds / 3600, seconds / 60 % 60, seconds % 60) else "${minutes.ifEmpty { "0" }}분", style = MaterialTheme.typography.displayMedium)
     if (running && remaining > 0) Text("종료 예정: " + java.time.LocalDateTime.now().plusSeconds(seconds).format(DateTimeFormatter.ofPattern("MM/dd HH:mm:ss")))
     OutlinedTextField(value = minutes, onValueChange = { if (it.length <= 5 && it.all(Char::isDigit)) minutes = it }, label = { Text("타이머 (분)") }, enabled = !running, modifier = Modifier.fillMaxWidth())
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

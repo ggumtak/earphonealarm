@@ -54,7 +54,9 @@ class AlarmForegroundService : Service() {
     override fun onBind(intent: Intent?) = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == STOP || intent?.action == SNOOZE) {
-            if (intent.getLongExtra("id", -1) != id || active.value == null) return START_NOT_STICKY
+            // A stale notification action can start this service when nothing is ringing.
+            if (active.value == null) { stopSelf(startId); return START_NOT_STICKY }
+            if (intent.getLongExtra("id", -1) != id) return START_NOT_STICKY
             job?.cancel()
             stopAudio()
             if (intent.action == SNOOZE) {
@@ -126,7 +128,9 @@ class AlarmForegroundService : Service() {
         try {
             media.setAudioAttributes(attrs)
             media.setVolume(0f, 0f)
-            if (!media.setPreferredDevice(device)) { stopAudio(); stopSelf(); return }
+            if (!media.setPreferredDevice(device)) {
+                stopAudio(); reportFailure(this, "출력 장치를 지정할 수 없어 소리를 중단했습니다."); stopSelf(); return
+            }
             media.setDataSource(this, if (fallback) systemDefaultAlarmUri() else config.sound.resolveUri(this))
             media.isLooping = true
             media.addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener { routing ->
@@ -139,7 +143,8 @@ class AlarmForegroundService : Service() {
                 it.start() // Muted until actual route is confirmed.
                 fadeJob = scope.launch {
                     var confirmed = false
-                    repeat(20) {
+                    // Bluetooth can take a moment to report its route; give up after about 3 seconds.
+                    repeat(60) {
                         if (player !== media) return@launch
                         if (media.routedDevice?.id == deviceId) confirmed = true
                         if (!confirmed) delay(50)
@@ -149,7 +154,8 @@ class AlarmForegroundService : Service() {
                     if (settings.vibrateWithSound) vibrate()
                     val steps = (settings.fadeIn.seconds * 10).coerceAtLeast(1)
                     for (step in 1..steps) {
-                        if (player !== media || media.routedDevice?.id != deviceId) { stopAudio(); applyDisconnected(); return@launch }
+                        if (player !== media) return@launch
+                        if (media.routedDevice?.id != deviceId) { stopAudio(); applyDisconnected(); return@launch }
                         val gain = config.volumePercent.coerceIn(0, 100) / 100f * step / steps
                         media.setVolume(gain, gain)
                         delay(100)
