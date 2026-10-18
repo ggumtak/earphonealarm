@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 시계 + 이어폰 줄을 단순화한 아이콘. 108dp 중 가운데 72dp 안전 영역에 그린다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,56m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0"
+        android:strokeWidth="5"
+        android:strokeColor="#FF5EE6D4" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,44L54,56L62,61"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="5"
+        android:strokeColor="#FF5EE6D4" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M30,36L37,29M78,36L71,29"
+        android:strokeLineCap="round"
+        android:strokeWidth="5"
+        android:strokeColor="#FF5EE6D4" />
+</vector>

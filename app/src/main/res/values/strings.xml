@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">이어폰 알람</string>
+
+    <!-- 공통 상단: 이어폰 상태 -->
+    <string name="earphone_connected">🎧 이어폰 연결됨 (알람 정상 작동)</string>
+    <string name="earphone_disconnected">🔇 이어폰 미연결 (설정에 따라 작동)</string>
+    <string name="earphone_detail_with_name">%1$s · %2$s</string>
+    <string name="connection_wired">유선</string>
+    <string name="connection_usb">USB</string>
+    <string name="connection_bluetooth">블루투스</string>
+    <string name="settings">설정</string>
+
+    <!-- 탭 -->
+    <string name="tab_timer">⏳ 타이머</string>
+    <string name="tab_alarm">⏰ 알람</string>
+
+    <!-- 타이머 -->
+    <string name="timer_remaining_minutes">%1$d min</string>
+    <string name="timer_end_time">🔊 %1$s</string>
+    <string name="timer_start">▶️ 시작</string>
+    <string name="timer_pause">⏸️ 일시정지</string>
+    <string name="timer_reset">✕ 초기화</string>
+    <string name="timer_running">타이머 진행 중</string>
+    <string name="timer_done">타이머가 끝났습니다</string>
+
+    <!-- 알람 목록 -->
+    <string name="alarm_add">+ 알람 추가</string>
+    <string name="alarm_sort_by_time">⇅ 시간순 정렬</string>
+    <string name="alarm_am">오전</string>
+    <string name="alarm_pm">오후</string>
+    <string name="alarm_empty">등록된 알람이 없습니다.\n아래 [+ 알람 추가]를 눌러 첫 알람을 만들어 보세요.</string>
+    <string name="alarm_rings_in">%1$s 후에 알람이 울립니다</string>
+    <string name="repeat_once">한 번만</string>
+    <string name="repeat_everyday">매일</string>
+    <string name="repeat_weekdays">평일</string>
+    <string name="repeat_weekend">주말</string>
+
+    <!-- 알람 추가/수정 바텀 시트 -->
+    <string name="sheet_title_add">알람 추가</string>
+    <string name="sheet_title_edit">알람 수정</string>
+    <string name="quick_add_15">+15분 뒤</string>
+    <string name="quick_add_30">+30분 뒤</string>
+    <string name="quick_add_60">+1시간 뒤</string>
+    <string name="repeat_label">반복</string>
+    <string name="memo_label">알람 메모</string>
+    <string name="memo_hint">예: 출근 준비</string>
+    <string name="custom_sound_toggle">이 알람만 다른 알람음·음량 사용</string>
+    <string name="custom_sound_follow_default">기본 설정 따름</string>
+    <string name="delete">삭제</string>
+    <string name="save">저장</string>
+    <string name="cancel">취소</string>
+
+    <!-- 설정: 알람 기본 설정 -->
+    <string name="section_alarm_defaults">알람 기본 설정</string>
+    <string name="sound_and_volume">알람음 및 음량</string>
+    <string name="sound_builtin_header">기본 알람음</string>
+    <string name="sound_custom_header">내 음악</string>
+    <string name="sound_add_from_device">+ 기기에서 음악 파일 추가</string>
+    <string name="sound_remove">삭제</string>
+    <string name="sound_unknown_name">음악 파일</string>
+    <string name="volume">음량</string>
+    <string name="sound_builtin_1">기본 알람음 1</string>
+    <string name="sound_builtin_2">기본 알람음 2</string>
+    <string name="sound_builtin_3">기본 알람음 3</string>
+    <string name="sound_builtin_4">기본 알람음 4</string>
+
+    <string name="snooze_title">다시 울림(스누즈) 간격</string>
+    <string name="auto_stop_title">자동 종료 시간</string>
+    <string name="auto_stop_desc">이 시간 동안 울린 후 자동으로 꺼집니다</string>
+    <string name="auto_stop_never">계속 울림</string>
+    <string name="fade_in_title">점점 크게 울리기 (페이드 인)</string>
+    <string name="fade_in_seconds">%1$d초 동안</string>
+    <string name="fade_in_minutes">%1$d분 동안</string>
+    <string name="option_off">사용 안 함</string>
+    <string name="minutes_format">%1$d분</string>
+
+    <string name="no_earphone_title">이어폰 미연결 시 작동 방식</string>
+    <string name="no_earphone_silent">울리지 않음 (무음 알림만 표시)</string>
+    <string name="no_earphone_vibrate">소리 없이 진동만 울리기</string>
+    <string name="no_earphone_vibrate_desc">하단 진동 설정이 꺼져 있어도 강제로 진동을 울립니다.</string>
+    <string name="no_earphone_speaker">스피커로 소리 울리기</string>
+
+    <string name="vibrate_with_sound">진동 함께 사용</string>
+    <string name="vibrate_with_sound_desc">이어폰으로 소리가 날 때 진동도 함께 울립니다</string>
+
+    <!-- 설정: 시간 형식 -->
+    <string name="section_time_format">시간 형식</string>
+    <string name="use_24_hour">24시간 형식 사용</string>
+
+    <!-- 설정: 권한 및 시스템 -->
+    <string name="section_permissions">권한 및 시스템</string>
+    <string name="permission_title">권한 및 백그라운드 실행 설정</string>
+    <string name="permission_desc">알람이 끊기지 않도록 배터리 최적화를 해제합니다</string>
+    <string name="perm_exact_alarm">정확한 알람</string>
+    <string name="perm_notification">알림 표시</string>
+    <string name="perm_bluetooth">블루투스 연결 확인</string>
+    <string name="perm_battery">배터리 최적화 제외</string>
+    <string name="perm_granted">허용됨</string>
+    <string name="perm_needed">허용 필요</string>
+    <string name="perm_open_settings">설정으로 이동</string>
+
+    <!-- 알람이 울리는 화면 -->
+    <string name="ringing_snooze">다시 울림</string>
+    <string name="ringing_snooze_in">%1$d분 뒤 다시 울림</string>
+    <string name="ringing_dismiss">알람 끄기</string>
+
+    <!-- 알림 채널 -->
+    <string name="channel_alarm">알람</string>
+    <string name="channel_alarm_desc">알람과 타이머가 울릴 때 표시됩니다</string>
+    <string name="channel_silent">무음 알림</string>
+    <string name="channel_silent_desc">이어폰이 연결되지 않아 소리 없이 알려 드릴 때 사용합니다</string>
+    <string name="notif_silent_text">이어폰이 연결되지 않아 소리 없이 알려 드립니다</string>
+
+    <!-- Phase 1 확인용 임시 화면 -->
+    <string name="phase1_check_message">이어폰을 꽂거나 블루투스 이어폰을 연결해 보세요. 위 표시가 바로 바뀌면 이어폰 감지가 정상입니다.</string>
+</resources>
