@@ -1,6 +1,6 @@
 # 이어폰 알람
 
-Kotlin + Jetpack Compose Android 앱. `quizquiz/earphone-alarm/`의 Phase 1에서 분리하고 알람·타이머 기능을 구현했습니다. Android 8(API 26) 이상, compile/target SDK 35.
+Kotlin + Jetpack Compose Android 앱. `quizquiz/earphone-alarm/`의 Phase 1에서 분리하고 알람·타이머 기능을 구현했습니다. Android 9(API 28) 이상, compile/target SDK 35.
 
 ## 구현한 기능
 
@@ -34,6 +34,8 @@ GitHub Actions의 **Android APK** 워크플로는 테스트·Lint·APK 생성을
 5. 이어폰으로 짧은 타이머를 실행해 실제 기기에서 확인합니다.
 
 ## 동작 범위와 한계
+
+- 원본의 minSdk 26을 28로 조정했습니다. MediaPlayer의 실제 출력 경로 확인·지정 API가 Android 9부터 제공되기 때문입니다.
 
 - `setPreferredDevice`는 출력 경로를 보장하는 API가 아닙니다. 이 앱은 음소거 상태에서 실제 경로를 확인하고, 재생 중 경로 변경과 `AUDIO_BECOMING_NOISY`에 대응합니다. OS/제조사 지연 때문에 이어폰 해제 순간의 짧은 스피커 누출을 절대 방지한다고 보장하지 않습니다.
 - 블루투스 스피커·차량 오디오·일부 USB DAC도 이어폰으로 분류됩니다. 특정 장치 허용 목록은 없습니다.
