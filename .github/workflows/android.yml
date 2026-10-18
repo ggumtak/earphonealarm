@@ -1,16 +1,27 @@
 name: Android APK
 on:
   push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      APP_BUILD_NUMBER: ${{ github.run_number }}
+      SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
     steps:
+      - name: Check signing secret
+        run: |
+          if [ -z "$SIGNING_PASSWORD" ]; then
+            echo "::error::저장소 Settings > Secrets and variables > Actions 에 SIGNING_PASSWORD를 추가해야 서명된 APK를 만들 수 있습니다."
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
@@ -22,11 +33,23 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
-      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug --console=plain
+      - run: ./gradlew testDebugUnitTest lintDebug assembleRelease --console=plain
+      - run: cp app/build/outputs/apk/release/app-release.apk earphonealarm.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: earphonealarm-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: earphonealarm-apk
+          path: earphonealarm.apk
+      # 폰에서 바로 받도록 매 빌드를 Releases에 올린다. 최신 APK는 항상 같은 주소:
+      # https://github.com/ggumtak/earphonealarm/releases/latest/download/earphonealarm.apk
+      - name: Publish release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n="${{ github.run_number }}"
+          gh release create "v1.0.$n" earphonealarm.apk --target "$GITHUB_SHA" --latest \
+            --title "이어폰 알람 1.0.$n" \
+            --notes "브랜치 ${GITHUB_REF_NAME}, 커밋 ${GITHUB_SHA::7}. 아래 earphonealarm.apk를 눌러 설치하세요."
       - uses: actions/upload-artifact@v4
         if: always()
         with:

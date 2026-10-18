@@ -13,15 +13,28 @@ android {
         applicationId = "com.earalarm.app"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // CI는 실행 번호를 넘겨 매 빌드가 이전 설치 위에 업데이트되게 한다.
+        val build = System.getenv("APP_BUILD_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = build
+        versionName = "1.0.$build"
+    }
+
+    // 고정 서명키. 키 파일은 암호화된 채로 저장소에 두고, 비밀번호는 GitHub Secret(SIGNING_PASSWORD)로만 받는다.
+    val signingPassword = System.getenv("SIGNING_PASSWORD")?.takeIf { it.isNotBlank() }
+    signingConfigs {
+        if (signingPassword != null) create("release") {
+            storeFile = rootProject.file("signing/release.p12")
+            storeType = "PKCS12"
+            storePassword = signingPassword
+            keyAlias = "earalarm"
+            keyPassword = signingPassword
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // 개인용 앱이므로 별도 서명키 없이 디버그 키로 서명한다.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

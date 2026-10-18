@@ -2,6 +2,18 @@
 
 Kotlin + Jetpack Compose Android 앱. `quizquiz/earphone-alarm/`의 Phase 1에서 분리하고 알람·타이머 기능을 구현했습니다. Android 9(API 28) 이상, compile/target SDK 35.
 
+## 폰에서 설치하기
+
+폰 브라우저에서 아래 주소를 열면 최신 APK가 바로 받아집니다. 로그인은 필요 없습니다.
+
+**https://github.com/ggumtak/earphonealarm/releases/latest/download/earphonealarm.apk**
+
+1. 받은 `earphonealarm.apk`를 엽니다. "출처를 알 수 없는 앱" 경고가 나오면 브라우저(또는 내 파일)에 설치를 허용합니다.
+2. 새 버전도 같은 주소에서 받아 그대로 설치하면 기존 알람을 유지한 채 업데이트됩니다.
+3. 예전에 Actions의 `app-debug.apk`를 설치했다면 서명이 달라 업데이트가 안 됩니다. 그 앱을 한 번 삭제하고 설치합니다.
+
+어느 브랜치든 푸시하면 GitHub Actions가 테스트·Lint 후 서명된 APK를 Releases에 올립니다. 지난 버전은 [Releases](https://github.com/ggumtak/earphonealarm/releases) 목록에 남습니다.
+
 ## 구현한 기능
 
 - 알람 추가·수정·삭제·활성화, 한 번/반복 요일, 메모, 개별 알람음·음량
@@ -18,12 +30,12 @@ Kotlin + Jetpack Compose Android 앱. `quizquiz/earphone-alarm/`의 Phase 1에�
 JDK 17, Android SDK 35, Gradle 8.9, AGP 8.7.3을 사용합니다.
 
 ```sh
-./gradlew testDebugUnitTest lintDebug assembleDebug
+SIGNING_PASSWORD=... ./gradlew testDebugUnitTest lintDebug assembleRelease
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`. Android Studio에서는 저장소 루트를 엽니다.
-GitHub Actions의 **Android APK** 워크플로는 테스트·Lint·APK 생성을 수행하고 APK를 아티팩트로 보관합니다.
-디버그 APK는 개인 테스트용입니다. CI의 임시 디버그 서명키는 실행마다 달라질 수 있어 기존 설치 위 업데이트가 안 될 수 있습니다. 지속 배포에는 별도 고정 서명키가 필요합니다.
+APK: `app/build/outputs/apk/release/app-release.apk`. Android Studio에서는 저장소 루트를 엽니다.
+
+서명: 고정 키 `signing/release.p12`(PKCS12, AES-256으로 암호화, 별칭 `earalarm`)를 저장소에 둡니다. 비밀번호는 저장소에 넣지 않고 GitHub Secret `SIGNING_PASSWORD`로만 전달합니다. 비밀번호가 없으면 CI는 실패하고 APK를 올리지 않습니다. 키나 비밀번호를 잃어버리면 같은 서명으로 업데이트할 수 없으니 앱을 삭제 후 재설치해야 합니다.
 
 ## 처음 실행할 때
 
