@@ -1,9 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
+
+// 고정 서명키(선택). 저장소에 올리지 않는 release.properties 또는 CI 환경 변수에서 읽는다.
+val releaseProps = Properties().apply {
+    rootProject.file("release.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+fun releaseValue(key: String, env: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() } ?: releaseProps.getProperty(key)?.takeIf { it.isNotBlank() }
+val releaseStore = rootProject.file(releaseValue("storeFile", "RELEASE_STORE_FILE") ?: "release.jks")
+val releaseStorePassword = releaseValue("storePassword", "RELEASE_STORE_PASSWORD")
 
 android {
     namespace = "com.earalarm.app"
@@ -17,11 +28,21 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        if (releaseStore.exists() && releaseStorePassword != null) create("release") {
+            storeFile = releaseStore
+            storePassword = releaseStorePassword
+            keyAlias = releaseValue("keyAlias", "RELEASE_KEY_ALIAS") ?: "earalarm"
+            // PKCS12 키는 저장소 비밀번호와 키 비밀번호가 같다.
+            keyPassword = releaseValue("keyPassword", "RELEASE_KEY_PASSWORD") ?: releaseStorePassword
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            // 개인용 앱이므로 별도 서명키 없이 디버그 키로 서명한다.
-            signingConfig = signingConfigs.getByName("debug")
+            // 고정 서명키가 있으면 그것으로, 없으면 디버그 키로 서명한다.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 

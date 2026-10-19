@@ -10,3 +10,8 @@
 .cxx/
 
 .kotlin/
+
+# 서명키와 비밀번호는 절대 커밋하지 않는다.
+release.properties
+*.jks
+*.keystore

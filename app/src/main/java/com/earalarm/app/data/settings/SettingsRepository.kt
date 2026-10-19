@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
+const val MAX_TIMER_MINUTES = 999
+
 val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class SettingsRepository(private val dataStore: DataStore<Preferences>) {
@@ -37,6 +39,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val VIBRATE_WITH_SOUND = booleanPreferencesKey("vibrate_with_sound")
         val USE_24_HOUR = booleanPreferencesKey("use_24_hour")
         val SORT_BY_TIME = booleanPreferencesKey("sort_alarms_by_time")
+        val TIMER_MINUTES = intPreferencesKey("timer_minutes")
     }
 
     val settings: Flow<AlarmSettings> = dataStore.data
@@ -56,6 +59,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setVibrateWithSound(enabled: Boolean) = edit { it[Keys.VIBRATE_WITH_SOUND] = enabled }
     suspend fun setUse24Hour(enabled: Boolean) = edit { it[Keys.USE_24_HOUR] = enabled }
     suspend fun setSortAlarmsByTime(enabled: Boolean) = edit { it[Keys.SORT_BY_TIME] = enabled }
+    suspend fun setTimerMinutes(minutes: Int) = edit { it[Keys.TIMER_MINUTES] = minutes.coerceIn(1, MAX_TIMER_MINUTES) }
 
     private suspend fun edit(block: (MutablePreferences) -> Unit) {
         dataStore.edit { block(it) }
@@ -73,6 +77,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             vibrateWithSound = this[Keys.VIBRATE_WITH_SOUND] ?: defaults.vibrateWithSound,
             use24Hour = this[Keys.USE_24_HOUR] ?: defaults.use24Hour,
             sortAlarmsByTime = this[Keys.SORT_BY_TIME] ?: defaults.sortAlarmsByTime,
+            timerMinutes = this[Keys.TIMER_MINUTES] ?: defaults.timerMinutes,
         )
     }
 }

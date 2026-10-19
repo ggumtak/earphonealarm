@@ -50,6 +50,8 @@ data class AlarmSettings(
     val vibrateWithSound: Boolean = false,
     val use24Hour: Boolean = false,
     val sortAlarmsByTime: Boolean = false,
+    /** 타이머 화면에 마지막으로 맞춰 둔 분 */
+    val timerMinutes: Int = 10,
 )
 
 /** 실제로 울릴 알람음과 음량 */

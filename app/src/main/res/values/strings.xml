@@ -3,8 +3,8 @@
     <string name="app_name">이어폰 알람</string>
 
     <!-- 공통 상단: 이어폰 상태 -->
-    <string name="earphone_connected">🎧 이어폰 연결됨 (알람 정상 작동)</string>
-    <string name="earphone_disconnected">🔇 이어폰 미연결 (설정에 따라 작동)</string>
+    <string name="earphone_connected">이어폰 연결됨</string>
+    <string name="earphone_disconnected">이어폰 없음</string>
     <string name="earphone_detail_with_name">%1$s · %2$s</string>
     <string name="connection_wired">유선</string>
     <string name="connection_usb">USB</string>

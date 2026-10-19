@@ -13,6 +13,14 @@ Kotlin + Jetpack Compose Android 앱. `quizquiz/earphone-alarm/`의 Phase 1에�
 - 직접 합성한 기본 알람음 4개, 시스템 알람음, SAF를 통한 내 음악 추가·삭제
 - 전역 설정 저장, 12/24시간 표시, 시간순 정렬
 
+## 화면
+
+- 상단: 이어폰 상태 배지(누르면 지금 울릴 때 동작 안내), 설정(⚙). 권한 문제가 있으면 톱니에 점과 배너 표시
+- 타이머/알람 탭은 눌러도, 좌우로 밀어도 전환
+- 타이머: 원형 진행 표시, +10/+5/+1(길게 누르면 빼기, 실행 중에도 연장), 가운데를 누르면 분 직접 입력, 종료 예정 시각과 출력 장치 아이콘
+- 알람: 큰 시각 + 반복·메모 + 남은 시간, 스위치로 켜고 끄면 "N시간 후에 울려요" 안내, 길게 누르면 수정·끄기·삭제(실행 취소 가능), ⇅ 시간순 정렬
+- 알람 추가/수정: 시계 다이얼 시트, 15분/30분/1시간 뒤 빠른 설정, 요일·매일/평일/주말, 메모, 개별 알람음
+
 ## 빌드
 
 JDK 17, Android SDK 35, Gradle 8.9, AGP 8.7.3을 사용합니다.
@@ -24,6 +32,13 @@ JDK 17, Android SDK 35, Gradle 8.9, AGP 8.7.3을 사용합니다.
 APK: `app/build/outputs/apk/debug/app-debug.apk`. Android Studio에서는 저장소 루트를 엽니다.
 GitHub Actions의 **Android APK** 워크플로는 테스트·Lint·APK 생성을 수행하고 APK를 아티팩트로 보관합니다.
 디버그 APK는 개인 테스트용입니다. CI의 임시 디버그 서명키는 실행마다 달라질 수 있어 기존 설치 위 업데이트가 안 될 수 있습니다. 지속 배포에는 별도 고정 서명키가 필요합니다.
+
+### 고정 서명키 (선택)
+
+키 파일과 비밀번호는 저장소에 올리지 않습니다(`.gitignore`에 `release.properties`, `*.jks`, `*.keystore`).
+
+- 로컬: 저장소 루트에 `release.jks`와 `release.properties`(`storePassword`, `keyAlias`, 필요하면 `storeFile`, `keyPassword`)를 두고 `./gradlew assembleRelease`
+- GitHub Actions: 저장소 Settings → Secrets에 `RELEASE_KEYSTORE_BASE64`(키 파일을 base64로 인코딩), `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, 필요하면 `RELEASE_KEY_PASSWORD`를 등록하면 `earphonealarm-release-apk` 아티팩트가 추가로 만들어집니다. 같은 키로 서명되므로 기존 설치 위에 업데이트됩니다.
 
 ## 처음 실행할 때
 

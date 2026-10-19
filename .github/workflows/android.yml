@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      HAS_RELEASE_KEY: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -27,6 +29,22 @@ jobs:
         with:
           name: earphonealarm-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+      # 고정 서명키가 저장소 Secrets에 있으면 업데이트 설치가 되는 릴리스 APK도 만든다.
+      - name: Build signed release APK
+        if: env.HAS_RELEASE_KEY == 'true'
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          RELEASE_STORE_FILE="$RUNNER_TEMP/release.jks" ./gradlew assembleRelease --console=plain
+      - uses: actions/upload-artifact@v4
+        if: env.HAS_RELEASE_KEY == 'true'
+        with:
+          name: earphonealarm-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:

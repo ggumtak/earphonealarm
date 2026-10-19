@@ -57,7 +57,7 @@ class AlarmScheduler(private val context: Context, private val repository: Alarm
     }
     suspend fun restore(afterBoot: Boolean = false) = mutex.withLock {
         if (afterBoot) {
-            prefs.edit().remove("timer/0").remove("timerPaused").commit()
+            prefs.edit().remove("timer/0").remove("timerPaused").remove("timerTotal").commit()
             prefs.all.keys.filter { it.startsWith("snooze/") }.forEach { cancelKey(it) }
         }
         if (!canSchedule()) return@withLock
@@ -67,10 +67,24 @@ class AlarmScheduler(private val context: Context, private val repository: Alarm
         (prefs.getLong("timer/0", 0) - SystemClock.elapsedRealtime()).coerceAtLeast(0)
         else prefs.getLong("timerPaused", 0)
     fun timerRunning() = prefs.contains("timer/0")
+    /** 진행 표시용 전체 길이. 일시정지 후 계속하거나 시간을 더해도 유지된다. */
+    fun timerTotal(): Long = maxOf(prefs.getLong("timerTotal", 0), timerRemaining())
     suspend fun startTimer(duration: Long) = mutex.withLock {
-        require(duration in 1..604800000L) { "타이머는 1분부터 7일 이내로 입력해 주세요" }
+        require(duration in 1..MAX_TIMER) { "타이머는 1분부터 7일 이내로 입력해 주세요" }
+        val resuming = prefs.getLong("timerPaused", 0) > 0
         register("timer/0", SystemClock.elapsedRealtime() + duration, true)
-        prefs.edit().remove("timerPaused").commit()
+        prefs.edit().remove("timerPaused").putLong("timerTotal", if (resuming) maxOf(prefs.getLong("timerTotal", 0), duration) else duration).commit()
+    }
+    /** 진행 중이거나 일시정지된 타이머에 시간을 더하거나 뺀다. 1초 미만으로 줄어들면 무시한다. */
+    suspend fun adjustTimer(delta: Long) = mutex.withLock {
+        val remaining = timerRemaining() + delta
+        if (remaining < 1000 || remaining > MAX_TIMER) return@withLock
+        when {
+            timerRunning() -> register("timer/0", SystemClock.elapsedRealtime() + remaining, true)
+            prefs.getLong("timerPaused", 0) > 0 -> prefs.edit().putLong("timerPaused", remaining).commit()
+            else -> return@withLock
+        }
+        prefs.edit().putLong("timerTotal", (prefs.getLong("timerTotal", 0) + delta).coerceAtLeast(remaining)).commit()
     }
     suspend fun pauseTimer() = mutex.withLock {
         val remaining = timerRemaining()
@@ -79,7 +93,7 @@ class AlarmScheduler(private val context: Context, private val repository: Alarm
     }
     suspend fun resetTimer() = mutex.withLock {
         cancelKey("timer/0"); cancelKey("snooze/0")
-        prefs.edit().remove("timerPaused").commit()
+        prefs.edit().remove("timerPaused").remove("timerTotal").commit()
     }
     suspend fun snooze(id: Long, minutes: Int) = mutex.withLock {
         if (minutes > 0 && (id == 0L || repository.get(id) != null))
@@ -97,4 +111,5 @@ class AlarmScheduler(private val context: Context, private val repository: Alarm
         if (alarm.repeatMask == 0) repository.setEnabled(id, false) else schedule(alarm)
         id
     }
+    private companion object { const val MAX_TIMER = 604800000L }
 }
