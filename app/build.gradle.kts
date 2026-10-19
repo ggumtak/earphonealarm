@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.roborazzi)
 }
 
 // 고정 서명키(선택). 저장소에 올리지 않는 release.properties 또는 CI 환경 변수에서 읽는다.
@@ -56,6 +57,17 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests {
+            // Robolectric이 매니페스트·리소스·테마를 읽을 수 있게 한다.
+            isIncludeAndroidResources = true
+        }
+    }
+}
+
+// 네이티브 그래픽으로 큰 화면을 그리므로 기본 테스트 힙(512MB)보다 넉넉하게 준다.
+tasks.withType<Test>().configureEach {
+    maxHeapSize = "2g"
 }
 
 ksp {
@@ -64,7 +76,15 @@ ksp {
 }
 
 dependencies {
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
