@@ -115,8 +115,8 @@ private fun Home() {
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
                 Row(Modifier.fillMaxWidth().height(72.dp).padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    EarphoneStatusChip(earphone, onClick = { showMessage(earphoneMessage(context, earphone, settings)) }, Modifier.weight(1f, fill = false))
-                    Spacer(Modifier.weight(0.2f))
+                    EarphoneStatusChip(earphone, onClick = { showMessage(earphoneMessage(context, earphone, settings)) }, Modifier.widthIn(max = 240.dp))
+                    Spacer(Modifier.weight(1f))
                     IconButton(onClick = { showSettings = true }, Modifier.size(56.dp)) {
                         BadgedBox(badge = { if (permissions.critical) Badge(containerColor = EarAlarmColors.DisconnectedContent) }) {
                             Icon(AppIcons.Settings, "설정", Modifier.size(32.dp))

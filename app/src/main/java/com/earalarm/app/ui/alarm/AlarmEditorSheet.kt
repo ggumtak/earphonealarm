@@ -1,8 +1,10 @@
 package com.earalarm.app.ui.alarm
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -15,10 +17,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.earalarm.app.data.local.AlarmEntity
@@ -51,6 +55,8 @@ fun AlarmEditorSheet(
 ) {
     val context = LocalContext.current
     var alarm by remember(initial) { mutableStateOf(initial) }
+    // 메모·알람음·빠른 반복은 기본으로 접어 두어 시트를 낮게 유지한다. 이미 값이 있으면 펼쳐서 보여 준다.
+    var more by remember(initial) { mutableStateOf(initial.label.isNotBlank() || initial.useCustomSound) }
     // '15분 뒤' 등을 누르면 키가 바뀌어 다이얼이 새 시각으로 다시 만들어진다.
     var base by remember(initial) { mutableStateOf(initial.hour to initial.minute) }
     val picker = key(base) { rememberTimePickerState(base.first, base.second, settings.use24Hour) }
@@ -80,36 +86,48 @@ fun AlarmEditorSheet(
                     )
                 }
             }
-            Spacer(Modifier.height(20.dp))
-            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("반복", Modifier.weight(1f), fontSize = 17.sp)
                     Text(alarm.repeatDays.summary(context.resources), color = EarAlarmColors.TealBright)
                 }
                 DayRow(alarm.repeatDays) { alarm = alarm.copy(repeatMask = it.mask) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("매일" to RepeatDays.EVERYDAY, "평일" to RepeatDays.WEEKDAYS, "주말" to RepeatDays.WEEKEND).forEach { (label, days) ->
-                        val selected = alarm.repeatDays == days
-                        FilterChip(selected = selected, onClick = { alarm = alarm.copy(repeatMask = if (selected) 0 else days.mask) }, label = { Text(label) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = EarAlarmColors.TealDark, selectedLabelColor = Color.White))
+            }
+            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable { more = !more }.padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("메모·알람음·빠른 반복", fontSize = 15.sp, color = EarAlarmColors.TextMuted)
+                Spacer(Modifier.weight(1f))
+                if (alarm.label.isNotBlank()) Text(alarm.label, Modifier.widthIn(max = 140.dp), color = EarAlarmColors.TealBright, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Icon(AppIcons.ChevronRight, if (more) "접기" else "펼치기", Modifier.size(24.dp).rotate(if (more) 90f else 0f), tint = EarAlarmColors.TextMuted)
+            }
+            AnimatedVisibility(visible = more) {
+                Column(Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("매일" to RepeatDays.EVERYDAY, "평일" to RepeatDays.WEEKDAYS, "주말" to RepeatDays.WEEKEND).forEach { (label, days) ->
+                                val selected = alarm.repeatDays == days
+                                FilterChip(selected = selected, onClick = { alarm = alarm.copy(repeatMask = if (selected) 0 else days.mask) }, label = { Text(label) },
+                                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = EarAlarmColors.TealDark, selectedLabelColor = Color.White))
+                            }
+                        }
+                        OutlinedTextField(
+                            value = alarm.label, onValueChange = { alarm = alarm.copy(label = it.take(100)) },
+                            label = { Text("알람 메모") }, placeholder = { Text("예: 출근 준비") }, singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EarAlarmColors.TealBright, focusedLabelColor = EarAlarmColors.TealBright,
+                                cursorColor = EarAlarmColors.TealBright),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    ToggleRow("이 알람만 다른 알람음·음량", alarm.useCustomSound, description = if (alarm.useCustomSound) null else "꺼 두면 설정의 기본 알람음을 써요") {
+                        alarm = alarm.copy(useCustomSound = it)
+                    }
+                    if (alarm.useCustomSound) {
+                        SoundChoiceRow(alarm.soundRef?.let(SoundRef::decode) ?: settings.defaultSound, sounds) { alarm = alarm.copy(soundRef = it.encode()) }
+                        VolumeRow(alarm.volumePercent ?: settings.volumePercent) { alarm = alarm.copy(volumePercent = it) }
                     }
                 }
-                OutlinedTextField(
-                    value = alarm.label, onValueChange = { alarm = alarm.copy(label = it.take(100)) },
-                    label = { Text("알람 메모") }, placeholder = { Text("예: 출근 준비") }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EarAlarmColors.TealBright, focusedLabelColor = EarAlarmColors.TealBright,
-                        cursorColor = EarAlarmColors.TealBright),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            ToggleRow("이 알람만 다른 알람음·음량", alarm.useCustomSound, description = if (alarm.useCustomSound) null else "꺼 두면 설정의 기본 알람음을 써요") {
-                alarm = alarm.copy(useCustomSound = it)
-            }
-            if (alarm.useCustomSound) {
-                SoundChoiceRow(alarm.soundRef?.let(SoundRef::decode) ?: settings.defaultSound, sounds) { alarm = alarm.copy(soundRef = it.encode()) }
-                VolumeRow(alarm.volumePercent ?: settings.volumePercent) { alarm = alarm.copy(volumePercent = it) }
             }
             Spacer(Modifier.height(8.dp))
         }

@@ -31,7 +31,7 @@
     <string name="alarm_pm">오후</string>
     <string name="alarm_empty">등록된 알람이 없습니다.\n아래 [+ 알람 추가]를 눌러 첫 알람을 만들어 보세요.</string>
     <string name="alarm_rings_in">%1$s 후에 알람이 울립니다</string>
-    <string name="repeat_once">한 번만</string>
+    <string name="repeat_once">반복 없음</string>
     <string name="repeat_everyday">매일</string>
     <string name="repeat_weekdays">평일</string>
     <string name="repeat_weekend">주말</string>
