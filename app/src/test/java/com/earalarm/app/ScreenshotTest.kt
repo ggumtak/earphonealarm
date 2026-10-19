@@ -27,7 +27,7 @@ import org.robolectric.shadows.ShadowLooper
  * 실제 화면을 JVM에서 그려 PNG로 남기는 스크린샷 테스트.
  *
  * - `./gradlew testDebugUnitTest` : Roborazzi가 꺼진 상태라 캡처는 건너뛰고 화면 동작만 확인한다.
- * - `./gradlew recordRoborazziDebug` : app/screenshots/*.png 를 새로 만든다.
+ * - `./gradlew recordRoborazziDebug` : app/screenshots 폴더의 PNG 를 새로 만든다.
  *
  * 화면에 `while (true) { delay(...) }` 루프가 있어 waitForIdle로는 안정 상태가 오지 않는다.
  * 그래서 시계를 직접 돌린다(mainClock.autoAdvance = false).
