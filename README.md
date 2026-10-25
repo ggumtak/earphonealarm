@@ -2,6 +2,12 @@
 
 Kotlin + Jetpack Compose Android 앱. `quizquiz/earphone-alarm/`의 Phase 1에서 분리하고 알람·타이머 기능을 구현했습니다. Android 9(API 28) 이상, compile/target SDK 35.
 
+## 다운로드
+
+- 최신 APK 직접 받기: https://github.com/ggumtak/earphonealarm/releases/latest/download/earphonealarm.apk (휴대폰 브라우저에서 열면 바로 받아집니다)
+- 모든 버전: https://github.com/ggumtak/earphonealarm/releases
+- 기존 설치 위에 업데이트가 실패하면 서명키가 다르기 때문이니 앱을 삭제한 뒤 설치하세요(아래 고정 서명키 참고).
+
 ## 구현한 기능
 
 - 알람 추가·수정·삭제·활성화, 한 번/반복 요일, 메모, 개별 알람음·음량
