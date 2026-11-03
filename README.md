@@ -6,7 +6,7 @@ Kotlin + Jetpack Compose Android 앱. `quizquiz/earphone-alarm/`의 Phase 1에�
 
 - 최신 APK 직접 받기: https://github.com/ggumtak/earphonealarm/releases/latest/download/earphonealarm.apk (휴대폰 브라우저에서 열면 바로 받아집니다)
 - 모든 버전: https://github.com/ggumtak/earphonealarm/releases
-- 기존 설치 위에 업데이트가 실패하면 서명키가 다르기 때문이니 앱을 삭제한 뒤 설치하세요(아래 고정 서명키 참고).
+- 이 버전(1.2)부터 임시 디버그 서명키 대신 고정 서명키를 씁니다. 1.1.x가 설치되어 있으면 한 번만 삭제한 뒤 설치하세요. 이후 업데이트는 기존 설치 위에 설치됩니다(아래 고정 서명키 참고).
 
 ## 구현한 기능
 
@@ -37,14 +37,14 @@ JDK 17, Android SDK 35, Gradle 8.9, AGP 8.7.3을 사용합니다.
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`. Android Studio에서는 저장소 루트를 엽니다.
 GitHub Actions의 **Android APK** 워크플로는 테스트·Lint·APK 생성을 수행하고 APK를 아티팩트로 보관합니다.
-디버그 APK는 개인 테스트용입니다. CI의 임시 디버그 서명키는 실행마다 달라질 수 있어 기존 설치 위 업데이트가 안 될 수 있습니다. 지속 배포에는 별도 고정 서명키가 필요합니다.
+디버그 APK는 개인 테스트용입니다. 고정 서명키(`SIGNING_PASSWORD`)가 없으면 CI는 임시 디버그 키로 서명해 기존 설치 위 업데이트가 안 될 수 있습니다.
 
-### 고정 서명키 (선택)
+### 고정 서명키
 
-키 파일과 비밀번호는 저장소에 올리지 않습니다(`.gitignore`에 `release.properties`, `*.jks`, `*.keystore`).
+`signing/release.p12`는 암호화된 PKCS12 키 파일(별칭 `earalarm`)이라 저장소에 포함되며, 비밀번호 없이는 쓸 수 없습니다. 비밀번호는 저장소에 올리지 않습니다(`.gitignore`에 `release.properties`, `*.jks`, `*.keystore`).
 
-- 로컬: 저장소 루트에 `release.jks`와 `release.properties`(`storePassword`, `keyAlias`, 필요하면 `storeFile`, `keyPassword`)를 두고 `./gradlew assembleRelease`
-- GitHub Actions: 저장소 Settings → Secrets에 `RELEASE_KEYSTORE_BASE64`(키 파일을 base64로 인코딩), `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, 필요하면 `RELEASE_KEY_PASSWORD`를 등록하면 `earphonealarm-release-apk` 아티팩트가 추가로 만들어집니다. 같은 키로 서명되므로 기존 설치 위에 업데이트됩니다.
+- GitHub Actions: 저장소 Secrets의 `SIGNING_PASSWORD`로만 받습니다. 있으면 서명된 `earphonealarm-release-apk`를 만들고 릴리스에도 이것을 올립니다. 같은 키로 서명되므로 기존 설치 위에 업데이트됩니다.
+- 로컬: 저장소 루트의 `release.properties`에 `storePassword`(필요하면 `keyAlias`)를 적고 `./gradlew assembleRelease`. 환경 변수 `SIGNING_PASSWORD`가 있으면 그것이 우선합니다.
 
 ## 처음 실행할 때
 
