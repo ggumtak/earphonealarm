@@ -29,6 +29,7 @@ class AlarmForegroundService : Service() {
     private var config = PlaybackConfig(SoundRef.DEFAULT, 70)
     private var wake: PowerManager.WakeLock? = null
     private var expectedDevice: Int? = null
+    private var speakerMode = false // 이어폰이 없어 일부러 스피커로 울리는 중
     private var ready = false
     private var title = "알람"
     private val handler = Handler(Looper.getMainLooper())
@@ -42,7 +43,11 @@ class AlarmForegroundService : Service() {
     }
     private val devices = object : AudioDeviceCallback() {
         override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>) {
-            if (removed.any { it.id == expectedDevice }) { stopAudio(); applyDisconnected() }
+            if (removed.none { it.id == expectedDevice }) return
+            if (speakerMode) { stopAudio(); applyDisconnected(); return }
+            // 이어폰 모드: 다른 이어폰 항목이 남아 있으면 경로만 옮겨 간 것이므로 계속 재생한다.
+            // (실제 출력 경로는 라우팅 변경 리스너와 페이드 루프가 검증한다.)
+            if (appContainer.earphoneDetector.preferredOutputDevice() == null) { stopAudio(); applyDisconnected() }
         }
     }
     override fun onCreate() {
@@ -106,15 +111,19 @@ class AlarmForegroundService : Service() {
             NoEarphoneAction.VIBRATE_ONLY -> vibrate()
             NoEarphoneAction.SPEAKER -> {
                 val speaker = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                if (speaker != null) play(speaker.id) else { reportFailure(this, "스피커를 찾을 수 없습니다."); stopSelf() }
+                if (speaker != null) play(speaker.id, speaker = true) else { reportFailure(this, "스피커를 찾을 수 없습니다."); stopSelf() }
             }
         }
     }
-    private fun play(deviceId: Int, fallback: Boolean = false) {
+    /** 실제 출력 경로 확인. 이어폰 모드는 이어폰 계열이면 통과, 스피커 모드는 고른 스피커와 정확히 일치해야 한다. */
+    private fun routeOk(routed: AudioDeviceInfo?, deviceId: Int, speaker: Boolean): Boolean =
+        if (speaker) routed?.id == deviceId else appContainer.earphoneDetector.isEarphone(routed)
+    private fun play(deviceId: Int, fallback: Boolean = false, speaker: Boolean = false) {
         stopAudio()
         val device = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.id == deviceId }
             ?: run { applyDisconnected(); return }
         expectedDevice = deviceId
+        speakerMode = speaker
         val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
         focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs)
             .setOnAudioFocusChangeListener({ change ->
@@ -136,7 +145,7 @@ class AlarmForegroundService : Service() {
             media.setPreferredDevice(device)
             media.isLooping = true
             media.addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener { routing ->
-                if (player === media && ready && routing.routedDevice?.id != expectedDevice) {
+                if (player === media && ready && !routeOk(routing.routedDevice, deviceId, speaker)) {
                     stopAudio(); reportFailure(this, "출력 경로가 변경되어 소리를 중단했습니다."); stopSelf()
                 }
             }, handler)
@@ -149,7 +158,7 @@ class AlarmForegroundService : Service() {
                     var tries = 0
                     while (!confirmed) {
                         if (player !== media) return@launch
-                        if (media.routedDevice?.id == deviceId) confirmed = true
+                        if (routeOk(media.routedDevice, deviceId, speaker)) confirmed = true
                         else if (tries++ >= 60) break
                         else delay(50)
                     }
@@ -160,7 +169,7 @@ class AlarmForegroundService : Service() {
                     val steps = (settings.fadeIn.seconds * 10).coerceAtLeast(1)
                     for (step in 1..steps) {
                         if (player !== media) return@launch // 새 플레이어가 대신했으면 건드리지 않는다.
-                        if (media.routedDevice?.id != deviceId) { stopAudio(); applyDisconnected(); return@launch }
+                        if (!routeOk(media.routedDevice, deviceId, speaker)) { stopAudio(); applyDisconnected(); return@launch }
                         val gain = config.volumePercent.coerceIn(0, 100) / 100f * step / steps
                         media.setVolume(gain, gain)
                         delay(100)
@@ -168,13 +177,13 @@ class AlarmForegroundService : Service() {
                 }
             }
             media.setOnErrorListener { _, _, _ ->
-                if (!fallback) play(deviceId, true)
+                if (!fallback) play(deviceId, true, speaker)
                 else { stopAudio(); reportFailure(this, "알람음을 읽을 수 없습니다."); stopSelf() }
                 true
             }
             media.prepareAsync()
         } catch (_: Exception) {
-            if (!fallback) play(deviceId, true)
+            if (!fallback) play(deviceId, true, speaker)
             else { stopAudio(); reportFailure(this, "알람음을 읽을 수 없습니다."); stopSelf() }
         }
     }
@@ -185,7 +194,7 @@ class AlarmForegroundService : Service() {
         ready = false
         fadeJob?.cancel(); fadeJob = null
         player?.let { runCatching { it.setVolume(0f, 0f) }; runCatching { it.release() } }
-        player = null; expectedDevice = null
+        player = null; expectedDevice = null; speakerMode = false
         vibrator.cancel()
         focus?.let { audio.abandonAudioFocusRequest(it) }; focus = null
     }

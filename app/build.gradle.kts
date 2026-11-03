@@ -27,7 +27,7 @@ android {
         minSdk = 28
         targetSdk = 35
         // 예전 1.0.x(실행 번호 기반) 빌드의 versionCode보다 커야 업데이트되므로 10으로 건너뛰었다. 이후 푸시마다 +1.
-        versionCode = 10
+        versionCode = 11
         versionName = "1.2"
     }
 

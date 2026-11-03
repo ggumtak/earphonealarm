@@ -58,6 +58,14 @@ class EarphoneDetector(context: Context) {
             .filter { it.isSink && it.type in earphoneTypes }
             .minByOrNull { earphoneTypes.indexOf(it.type) }
 
+    /**
+     * 이 장치가 이어폰 계열 출력인지. 경로 확인용이다.
+     * 갤럭시 버즈는 우리가 고른 장치와 다른 항목(A2DP ↔ LE Audio 등)이나 새로 만들어진 id로 라우팅될 수 있어
+     * id 비교 대신 '내장 스피커·수화부가 아니다'만 보장한다.
+     */
+    fun isEarphone(device: AudioDeviceInfo?): Boolean =
+        device != null && device.isSink && device.type in earphoneTypes
+
     fun isConnected(): Boolean = preferredOutputDevice() != null
 
     fun currentState(): EarphoneState {

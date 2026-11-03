@@ -101,12 +101,12 @@ class SoundPreview(context: Context) {
             media.setPreferredDevice(device) // setDataSource 뒤에 지정해야 한다. 실패해도 무음으로 두고 경로 확인으로 거른다.
             media.isLooping = true
             media.addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener { routing ->
-                if (player === media && routed && routing.routedDevice?.id != device.id) stop()
+                if (player === media && routed && !app.appContainer.earphoneDetector.isEarphone(routing.routedDevice)) stop()
             }, handler)
             media.setOnPreparedListener {
                 if (player !== it) return@setOnPreparedListener
                 it.start() // 경로가 확인될 때까지 무음
-                awaitRoute(it, device.id, 0)
+                awaitRoute(it, 0)
             }
             media.setOnErrorListener { failed, _, _ ->
                 if (player === failed) {
@@ -122,16 +122,16 @@ class SoundPreview(context: Context) {
     }
 
     /** 블루투스는 경로가 잡히기까지 걸리므로 최대 약 3초 기다린다. 확인되지 않으면 소리 없이 끝낸다. */
-    private fun awaitRoute(media: MediaPlayer, deviceId: Int, tries: Int) {
+    private fun awaitRoute(media: MediaPlayer, tries: Int) {
         if (player !== media) return
-        if (media.routedDevice?.id == deviceId) {
+        if (app.appContainer.earphoneDetector.isEarphone(media.routedDevice)) {
             routed = true
             val gain = volume / 100f
             media.setVolume(gain, gain)
             return
         }
         if (tries >= 60) { stop(); return }
-        handler.postDelayed({ awaitRoute(media, deviceId, tries + 1) }, 50)
+        handler.postDelayed({ awaitRoute(media, tries + 1) }, 50)
     }
 
     private fun hint() {
