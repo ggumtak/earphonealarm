@@ -18,7 +18,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextRange
@@ -45,6 +47,7 @@ import java.time.LocalTime
 fun TimerScreen(earphone: EarphoneState, settings: AlarmSettings, run: (suspend () -> Unit) -> Unit) {
     val app = LocalContext.current.appContainer
     val scheduler = app.scheduler
+    val haptic = LocalHapticFeedback.current
     // -1: 저장된 마지막 시간을 아직 읽지 않음
     var minutes by rememberSaveable { mutableIntStateOf(-1) }
     LaunchedEffect(Unit) { if (minutes < 0) minutes = app.settingsRepository.current().timerMinutes }
@@ -78,7 +81,7 @@ fun TimerScreen(earphone: EarphoneState, settings: AlarmSettings, run: (suspend 
         }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             listOf(10, 5, 1).forEach { value ->
-                CircleButton(onClick = { add(value) }, contentDescription = "${value}분 더하기", onLongClick = { add(-value) }) {
+                CircleButton(onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); add(value) }, contentDescription = "${value}분 더하기", onLongClick = { add(-value) }) {
                     Text("+$value", fontSize = 30.sp)
                 }
             }
@@ -86,7 +89,7 @@ fun TimerScreen(earphone: EarphoneState, settings: AlarmSettings, run: (suspend 
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             CircleButton(
-                onClick = { run {
+                onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); run {
                     when {
                         running -> scheduler.pauseTimer()
                         active -> scheduler.startTimer(remaining)

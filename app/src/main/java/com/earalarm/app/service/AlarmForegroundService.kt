@@ -54,7 +54,11 @@ class AlarmForegroundService : Service() {
     override fun onBind(intent: Intent?) = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == STOP || intent?.action == SNOOZE) {
-            if (intent.getLongExtra("id", -1) != id || active.value == null) return START_NOT_STICKY
+            if (intent.getLongExtra("id", -1) != id || active.value == null) {
+                // 울리는 알람이 없는데 낡은 STOP/SNOOZE가 오면 포그라운드 서비스가 남지 않도록 정리한다.
+                if (active.value == null && player == null) stopSelf()
+                return START_NOT_STICKY
+            }
             job?.cancel()
             stopAudio()
             if (intent.action == SNOOZE) {
@@ -126,8 +130,10 @@ class AlarmForegroundService : Service() {
         try {
             media.setAudioAttributes(attrs)
             media.setVolume(0f, 0f)
-            if (!media.setPreferredDevice(device)) { stopAudio(); stopSelf(); return }
             media.setDataSource(this, if (fallback) systemDefaultAlarmUri() else config.sound.resolveUri(this))
+            // 네이티브 플레이어는 setDataSource에서 만들어지므로 그 뒤에 지정해야 한다.
+            // 실패해도 중단하지 않는다. 무음으로 두고 아래에서 실제 출력 장치가 확인될 때만 소리를 낸다(스피커 누출 방지).
+            media.setPreferredDevice(device)
             media.isLooping = true
             media.addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener { routing ->
                 if (player === media && ready && routing.routedDevice?.id != expectedDevice) {
@@ -138,18 +144,23 @@ class AlarmForegroundService : Service() {
                 if (player !== it) return@setOnPreparedListener
                 it.start() // Muted until actual route is confirmed.
                 fadeJob = scope.launch {
+                    // 블루투스 A2DP는 경로가 잡히기까지 시간이 걸리므로 최대 약 3초 기다린다.
                     var confirmed = false
-                    repeat(20) {
+                    var tries = 0
+                    while (!confirmed) {
                         if (player !== media) return@launch
                         if (media.routedDevice?.id == deviceId) confirmed = true
-                        if (!confirmed) delay(50)
+                        else if (tries++ >= 60) break
+                        else delay(50)
                     }
-                    if (!confirmed) { stopAudio(); reportFailure(this@AlarmForegroundService, "출력 경로를 확인할 수 없어 소리를 중단했습니다."); stopSelf(); return@launch }
+                    if (player !== media) return@launch
+                    if (!confirmed) { stopAudio(); reportFailure(this@AlarmForegroundService, "이어폰으로 소리를 보낼 수 없어 중단했어요. 이어폰 연결을 확인해 주세요."); stopSelf(); return@launch }
                     ready = true
                     if (settings.vibrateWithSound) vibrate()
                     val steps = (settings.fadeIn.seconds * 10).coerceAtLeast(1)
                     for (step in 1..steps) {
-                        if (player !== media || media.routedDevice?.id != deviceId) { stopAudio(); applyDisconnected(); return@launch }
+                        if (player !== media) return@launch // 새 플레이어가 대신했으면 건드리지 않는다.
+                        if (media.routedDevice?.id != deviceId) { stopAudio(); applyDisconnected(); return@launch }
                         val gain = config.volumePercent.coerceIn(0, 100) / 100f * step / steps
                         media.setVolume(gain, gain)
                         delay(100)

@@ -36,6 +36,7 @@ import com.earalarm.app.data.model.summary
 import com.earalarm.app.ui.components.SoundChoiceRow
 import com.earalarm.app.ui.components.ToggleRow
 import com.earalarm.app.ui.components.VolumeRow
+import com.earalarm.app.ui.components.rememberSoundPreview
 import com.earalarm.app.ui.theme.AppIcons
 import com.earalarm.app.ui.theme.EarAlarmColors
 import kotlinx.coroutines.launch
@@ -54,6 +55,7 @@ fun AlarmEditorSheet(
     onDelete: (() -> Unit)?,
 ) {
     val context = LocalContext.current
+    val preview = rememberSoundPreview()
     var alarm by remember(initial) { mutableStateOf(initial) }
     // 메모·알람음·빠른 반복은 기본으로 접어 두어 시트를 낮게 유지한다. 이미 값이 있으면 펼쳐서 보여 준다.
     var more by remember(initial) { mutableStateOf(initial.label.isNotBlank() || initial.useCustomSound) }
@@ -124,8 +126,10 @@ fun AlarmEditorSheet(
                         alarm = alarm.copy(useCustomSound = it)
                     }
                     if (alarm.useCustomSound) {
-                        SoundChoiceRow(alarm.soundRef?.let(SoundRef::decode) ?: settings.defaultSound, sounds) { alarm = alarm.copy(soundRef = it.encode()) }
-                        VolumeRow(alarm.volumePercent ?: settings.volumePercent) { alarm = alarm.copy(volumePercent = it) }
+                        val sound = alarm.soundRef?.let(SoundRef::decode) ?: settings.defaultSound
+                        val volume = alarm.volumePercent ?: settings.volumePercent
+                        SoundChoiceRow(sound, sounds, preview = preview, previewVolume = volume) { alarm = alarm.copy(soundRef = it.encode()) }
+                        VolumeRow(volume, preview = { preview.playOrAdjust(sound, it) }) { alarm = alarm.copy(volumePercent = it) }
                     }
                 }
             }

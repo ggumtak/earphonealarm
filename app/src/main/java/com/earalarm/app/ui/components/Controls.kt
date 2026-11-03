@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.earalarm.app.data.local.CustomSoundEntity
 import com.earalarm.app.data.model.BuiltInSounds
 import com.earalarm.app.data.model.SoundRef
+import com.earalarm.app.ui.theme.AppIcons
 import com.earalarm.app.ui.theme.EarAlarmColors
 import java.time.Duration
 import java.time.LocalTime
@@ -128,18 +129,32 @@ fun ToggleRow(title: String, checked: Boolean, description: String? = null, onCh
     }
 }
 
-/** 현재 값을 보여 주고 누르면 라디오 목록 대화상자를 연다. */
+/**
+ * 현재 값을 보여 주고 누르면 라디오 목록 대화상자를 연다.
+ * [onPreview]가 있으면 '선택 후 미리 듣기' 방식: 항목을 누르면 고르기만 하고 미리 듣기, 확인을 눌러야 적용된다.
+ * [onPreviewEnd]는 대화상자가 닫힐 때 호출된다.
+ */
 @Composable
 fun <T> ChoiceRow(title: String, selected: T, values: List<T>, label: (T) -> String, description: String? = null,
-                  leading: ImageVector? = null, footer: (@Composable () -> Unit)? = null, onSelect: (T) -> Unit) {
+                  leading: ImageVector? = null, footer: (@Composable () -> Unit)? = null,
+                  onPreview: ((T) -> Unit)? = null, onPreviewEnd: (() -> Unit)? = null, onSelect: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
     SettingRow(title, value = label(selected), description = description, leading = leading, onClick = { open = true })
-    if (open) ChoiceDialog(title, selected, values, label, onDismiss = { open = false }, footer = footer) { open = false; onSelect(it) }
+    if (open) ChoiceDialog(title, selected, values, label, onDismiss = { open = false }, footer = footer,
+        onPreview = onPreview, onPreviewEnd = onPreviewEnd) { open = false; onSelect(it) }
 }
 
 @Composable
 fun <T> ChoiceDialog(title: String, selected: T, values: List<T>, label: (T) -> String, onDismiss: () -> Unit,
-                     footer: (@Composable () -> Unit)? = null, onSelect: (T) -> Unit) {
+                     footer: (@Composable () -> Unit)? = null, onPreview: ((T) -> Unit)? = null,
+                     onPreviewEnd: (() -> Unit)? = null, onSelect: (T) -> Unit) {
+    val previewing = onPreview != null
+    var pending by remember { mutableStateOf(selected) }
+    val current = if (previewing) pending else selected
+    val dismiss: (@Composable () -> Unit)? = if (previewing) {
+        { TextButton(onClick = onDismiss) { Text("취소", color = EarAlarmColors.TextMuted) } }
+    } else null
+    if (onPreviewEnd != null) DisposableEffect(Unit) { onDispose { onPreviewEnd() } }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = EarAlarmColors.Sheet,
@@ -149,11 +164,13 @@ fun <T> ChoiceDialog(title: String, selected: T, values: List<T>, label: (T) -> 
                 values.forEach { value ->
                     Row(
                         Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(MaterialTheme.shapes.small)
-                            .selectable(selected = value == selected, role = Role.RadioButton) { onSelect(value) }
+                            .selectable(selected = value == current, role = Role.RadioButton) {
+                                if (onPreview != null) { pending = value; onPreview(value) } else onSelect(value)
+                            }
                             .padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(selected = value == selected, onClick = null,
+                        RadioButton(selected = value == current, onClick = null,
                             colors = RadioButtonDefaults.colors(selectedColor = EarAlarmColors.TealBright))
                         Spacer(Modifier.width(12.dp))
                         Text(label(value), style = MaterialTheme.typography.bodyLarge)
@@ -162,33 +179,47 @@ fun <T> ChoiceDialog(title: String, selected: T, values: List<T>, label: (T) -> 
                 footer?.invoke()
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("닫기", color = EarAlarmColors.TealBright) } },
+        confirmButton = {
+            if (previewing) TextButton(onClick = { onSelect(pending) }) { Text("확인", color = EarAlarmColors.TealBright) }
+            else TextButton(onClick = onDismiss) { Text("닫기", color = EarAlarmColors.TealBright) }
+        },
+        dismissButton = dismiss,
     )
 }
 
+/** [preview]가 있으면 드래그 중 현재 값으로 호출하고(정수 값이 바뀔 때만), 스피커 버튼으로 바로 들어 볼 수 있다. */
 @Composable
-fun VolumeRow(value: Int, onSet: (Int) -> Unit) {
+fun VolumeRow(value: Int, preview: ((Int) -> Unit)? = null, onSet: (Int) -> Unit) {
     var draft by remember(value) { mutableFloatStateOf(value.toFloat()) }
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
-        Row(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("음량", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, fontSize = 17.sp)
             Text("${draft.toInt()}%", color = EarAlarmColors.TealBright)
+            if (preview != null) IconButton(onClick = { preview(draft.toInt()) }, Modifier.size(36.dp)) {
+                Icon(AppIcons.Speaker, "미리 듣기", Modifier.size(22.dp), tint = EarAlarmColors.TealBright)
+            }
         }
-        Slider(value = draft, onValueChange = { draft = it }, valueRange = 0f..100f, onValueChangeFinished = { onSet(draft.toInt()) },
+        Slider(value = draft, onValueChange = {
+            val changed = it.toInt() != draft.toInt()
+            draft = it
+            if (changed) preview?.invoke(it.toInt())
+        }, valueRange = 0f..100f, onValueChangeFinished = { onSet(draft.toInt()) },
             colors = SliderDefaults.colors(thumbColor = EarAlarmColors.TealBright, activeTrackColor = EarAlarmColors.Teal,
                 inactiveTrackColor = EarAlarmColors.Field))
     }
 }
 
 @Composable
-fun SoundChoiceRow(selected: SoundRef, sounds: List<CustomSoundEntity>, footer: (@Composable () -> Unit)? = null, onSelect: (SoundRef) -> Unit) {
+fun SoundChoiceRow(selected: SoundRef, sounds: List<CustomSoundEntity>, preview: SoundPreview? = null, previewVolume: Int = 70,
+                   footer: (@Composable () -> Unit)? = null, onSelect: (SoundRef) -> Unit) {
     val context = LocalContext.current
     val choices = listOf<SoundRef>(SoundRef.SystemDefault) + BuiltInSounds.all.map { SoundRef.BuiltIn(it.resName) } + sounds.map { SoundRef.Custom(it.uri) }
     ChoiceRow("알람음", selected, choices, { ref -> when (ref) {
         SoundRef.SystemDefault -> "시스템 기본 알람음"
         is SoundRef.BuiltIn -> BuiltInSounds.all.firstOrNull { it.resName == ref.resName }?.let { context.getString(it.labelRes) } ?: "기본 알람음"
         is SoundRef.Custom -> sounds.firstOrNull { it.uri == ref.uri }?.displayName ?: "내 음악"
-    } }, footer = footer, onSelect = onSelect)
+    } }, footer = footer, onPreview = preview?.let { p -> { ref: SoundRef -> p.play(ref, previewVolume); Unit } },
+        onPreviewEnd = preview?.let { p -> { p.stop() } }, onSelect = onSelect)
 }
 
 /** "6:00" 과 "AM"을 나눠서 돌려준다. 24시간 형식이면 두 번째 값은 빈 문자열 */

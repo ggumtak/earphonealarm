@@ -7,7 +7,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.media.AudioManager
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,6 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.earalarm.app.R
 import com.earalarm.app.appContainer
@@ -37,6 +43,7 @@ import com.earalarm.app.data.model.*
 import com.earalarm.app.ui.components.*
 import com.earalarm.app.ui.theme.AppIcons
 import com.earalarm.app.ui.theme.EarAlarmColors
+import kotlinx.coroutines.delay
 
 /** 앱 동작에 필요한 권한 상태. 화면으로 돌아올 때마다 다시 확인한다. */
 data class PermissionStatus(
@@ -104,6 +111,20 @@ fun SettingsScreen(
     val packageInfo = remember { context.packageManager.getPackageInfo(context.packageName, 0) }
     var refresh by remember { mutableIntStateOf(0) }
     val status = remember(permissions, refresh) { PermissionStatus.read(context) }
+    val preview = rememberSoundPreview()
+    // 앱은 시스템 음량을 바꾸지 않고 미디어 음량으로 재생하므로 현재 값을 보여 준다. 화면이 보이는 동안 1초마다 갱신.
+    val audioManager = remember { context.getSystemService(AudioManager::class.java) }
+    var mediaVolume by remember { mutableIntStateOf(-1) }
+    val owner = LocalLifecycleOwner.current
+    LaunchedEffect(owner) {
+        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                mediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) * 100 / max
+                delay(1000)
+            }
+        }
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) run {
         val added = app.soundRepository.addFromDevice(uri)
         check(added != null) { "이 파일의 지속적인 읽기 권한을 얻지 못했어요. 다른 파일을 선택해 주세요." }
@@ -141,14 +162,24 @@ fun SettingsScreen(
                     description = settings.noEarphoneAction.descriptionRes?.let { context.getString(it) }) { run { repo.setNoEarphoneAction(it) } }
 
                 SectionTitle("알람음")
-                SoundChoiceRow(settings.defaultSound, sounds, footer = {
+                SoundChoiceRow(settings.defaultSound, sounds, preview = preview, previewVolume = settings.volumePercent, footer = {
                     TextButton(onClick = { picker.launch(arrayOf("audio/*")) }, modifier = Modifier.padding(top = 8.dp)) {
                         Icon(AppIcons.Plus, null, Modifier.size(18.dp), tint = EarAlarmColors.TealBright)
                         Spacer(Modifier.width(8.dp))
                         Text("기기에서 음악 파일 추가", color = EarAlarmColors.TealBright)
                     }
                 }) { run { repo.setDefaultSound(it) } }
-                VolumeRow(settings.volumePercent) { run { repo.setVolume(it) } }
+                VolumeRow(settings.volumePercent, preview = { preview.playOrAdjust(settings.defaultSound, it) }) { run { repo.setVolume(it) } }
+                if (mediaVolume >= 0) {
+                    val silent = mediaVolume == 0
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (silent) "미디어 음량이 0이라 소리가 나지 않아요" else "휴대폰 미디어 음량 $mediaVolume%", Modifier.weight(1f),
+                            color = if (silent) EarAlarmColors.DisconnectedContent else EarAlarmColors.TextMuted, fontSize = 13.sp)
+                        if (silent) TextButton(onClick = {
+                            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_SAME, AudioManager.FLAG_SHOW_UI)
+                        }) { Text("음량 조절", color = EarAlarmColors.DisconnectedContent) }
+                    }
+                }
                 SettingRow("내 음악 추가", description = "기기에 있는 음악 파일을 알람음으로 써요", leading = AppIcons.Music,
                     onClick = { picker.launch(arrayOf("audio/*")) })
                 sounds.forEach { sound ->
@@ -162,7 +193,11 @@ fun SettingsScreen(
                 ChoiceRow("자동 종료", settings.autoStop, AutoStopDuration.values().toList(), { it.label(context.resources) },
                     description = "이 시간 동안 울린 뒤 자동으로 꺼져요") { run { repo.setAutoStop(it) } }
                 ChoiceRow("점점 크게 울리기", settings.fadeIn, FadeInDuration.values().toList(), { it.label(context.resources) }) { run { repo.setFadeIn(it) } }
-                ToggleRow("진동 함께 사용", settings.vibrateWithSound, "이어폰으로 소리가 날 때 진동도 함께 울려요") { run { repo.setVibrateWithSound(it) } }
+                ToggleRow("진동 함께 사용", settings.vibrateWithSound, "이어폰으로 소리가 날 때 진동도 함께 울려요") { on ->
+                    run { repo.setVibrateWithSound(on) }
+                    // 켤 때 어떤 진동인지 바로 느껴 볼 수 있게 짧게 울린다.
+                    if (on) context.getSystemService(Vibrator::class.java)?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
+                }
 
                 SectionTitle("표시")
                 ToggleRow("24시간 형식", settings.use24Hour) { run { repo.setUse24Hour(it) } }

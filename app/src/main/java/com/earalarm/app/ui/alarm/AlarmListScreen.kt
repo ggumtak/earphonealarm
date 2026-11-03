@@ -33,6 +33,23 @@ import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalTime
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
+import java.util.Locale
+
+/** "다음 알람 · 내일 오전 6:00 (13시간 18분 후)" */
+private fun nextAlarmSummary(alarm: AlarmEntity, now: ZonedDateTime, use24Hour: Boolean): String {
+    val left = timeUntil(alarm, now)
+    val at = now.plus(left)
+    val day = when (ChronoUnit.DAYS.between(now.toLocalDate(), at.toLocalDate())) {
+        0L -> "오늘"
+        1L -> "내일"
+        else -> at.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
+    }
+    val time = LocalTime.of(alarm.hour, alarm.minute).format(DateTimeFormatter.ofPattern(if (use24Hour) "HH:mm" else "a h:mm", Locale.KOREAN))
+    return "다음 알람 · $day $time (${formatDuration(left)} 후)"
+}
 
 /** 다음 울림까지 남은 시간. 스낵바와 목록에서 같이 쓴다. */
 fun timeUntil(alarm: AlarmEntity, now: ZonedDateTime = ZonedDateTime.now()): Duration =
@@ -52,6 +69,7 @@ fun AlarmListScreen(
     val haptic = LocalHapticFeedback.current
     val now by produceState(ZonedDateTime.now()) { while (true) { delay(15_000); value = ZonedDateTime.now() } }
     val sorted = if (settings.sortAlarmsByTime) alarms.sortedWith(compareBy<AlarmEntity> { it.hour }.thenBy { it.minute }) else alarms
+    val next = alarms.filter { it.enabled }.minByOrNull { timeUntil(it, now) }
     Column(Modifier.fillMaxSize()) {
         if (sorted.isEmpty()) {
             Column(Modifier.weight(1f).fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally,
@@ -61,6 +79,10 @@ fun AlarmListScreen(
                 Text("등록된 알람이 없어요\n아래 + 버튼으로 추가해 보세요", color = EarAlarmColors.TextMuted, textAlign = TextAlign.Center, fontSize = 17.sp)
             }
         } else LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(vertical = 8.dp)) {
+            if (next != null) item(key = "next-alarm") {
+                Text(nextAlarmSummary(next, now, settings.use24Hour), Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                    color = EarAlarmColors.TextMuted, fontSize = 14.sp)
+            }
             items(sorted, key = { it.id }) { alarm ->
                 var menu by remember { mutableStateOf(false) }
                 Box {
@@ -71,7 +93,7 @@ fun AlarmListScreen(
                             onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true },
                             onClick = { onEdit(alarm) },
                         ),
-                        onToggle = { onToggle(alarm, it) })
+                        onToggle = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onToggle(alarm, it) })
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, offset = DpOffset(20.dp, 0.dp)) {
                         DropdownMenuItem(text = { Text("수정") }, onClick = { menu = false; onEdit(alarm) })
                         DropdownMenuItem(text = { Text(if (alarm.enabled) "끄기" else "켜기") }, onClick = { menu = false; onToggle(alarm, !alarm.enabled) })
