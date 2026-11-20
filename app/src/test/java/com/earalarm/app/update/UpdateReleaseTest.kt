@@ -27,19 +27,17 @@ class UpdateReleaseTest {
     @Test fun rejectsUnexpectedAssetsAndOtherRepos() {
         assertNull(UpdateRelease.parse(json(apkUrl = url.replace("ggumtak", "elsewhere"))))
         assertNull(UpdateRelease.parse(json().replace("v1.10", "v1.10-beta")))
-        assertNull(UpdateRelease.parse(json(digest = "\"sha256:invalid\"")))
-        assertNull(UpdateRelease.parse(json(size = UpdateRelease.MAX_APK_BYTES + 1)))
+        assertNull(UpdateRelease.parse(json(size = 0)))
         assertNull(UpdateRelease.parse(json().replace("\"draft\":false", "\"draft\":true")))
     }
 
-    @Test fun readsOptionalAssetSha256() {
-        val digest = "ab".repeat(32)
-        assertEquals(digest, UpdateRelease.parse(json(digest = "\"sha256:$digest\""))?.sha256)
-        assertNull(UpdateRelease.parse(json())?.sha256)
+    @Test fun linksToTheReleasePage() {
+        assertEquals("https://github.com/ggumtak/earphonealarm/releases/tag/v1.10",
+            UpdateRelease.parse(json())?.pageUrl)
     }
 
-    private fun json(apkUrl: String = url, size: Long = 500, digest: String = "null") =
+    private fun json(apkUrl: String = url, size: Long = 500) =
         """{"tag_name":"v1.10","draft":false,"assets":[
-            {"name":"earphonealarm.apk","browser_download_url":"$apkUrl","size":$size,"digest":$digest}
+            {"name":"earphonealarm.apk","browser_download_url":"$apkUrl","size":$size}
         ]}"""
 }
