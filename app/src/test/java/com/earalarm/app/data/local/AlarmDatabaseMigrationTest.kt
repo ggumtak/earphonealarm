@@ -25,14 +25,14 @@ class AlarmDatabaseMigrationTest {
             db.execSQL("INSERT INTO alarms VALUES (1, 7, 30, 31, '출근', 1, 0, NULL, NULL, 1000)")
             db.version = 1
         }
+        val db = AppDatabase.create(context)
         try {
-            AppDatabase.create(context).use { db ->
-                val alarm = runBlocking { requireNotNull(db.alarmDao().getById(1)) }
-                assertEquals("출근", alarm.label)
-                assertEquals(31, alarm.repeatMask)
-                assertNull(alarm.onceAtMillis)
-            }
+            val alarm = runBlocking { requireNotNull(db.alarmDao().getById(1)) }
+            assertEquals("출근", alarm.label)
+            assertEquals(31, alarm.repeatMask)
+            assertNull(alarm.onceAtMillis)
         } finally {
+            db.close()
             context.deleteDatabase("ear_alarm.db")
         }
     }
