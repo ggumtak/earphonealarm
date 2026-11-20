@@ -27,9 +27,9 @@ class AlarmPhraseTest {
         assertNull(weekday.onceAtMillis)
     }
 
-    @Test fun relativeAlarmNeverRingsEarlierThanRequested() {
+    @Test fun relativeAlarmKeepsTheExactDelay() {
         val phrase = parseAlarmPhrase("1시간 30분 뒤에 알려줘", now)
-        assertEquals(Instant.parse("2026-11-20T23:11:00Z").toEpochMilli(), phrase.onceAtMillis)
+        assertEquals(Instant.parse("2026-11-20T23:10:15Z").toEpochMilli(), phrase.onceAtMillis)
         assertEquals(RepeatDays.NONE, phrase.repeatDays)
     }
 

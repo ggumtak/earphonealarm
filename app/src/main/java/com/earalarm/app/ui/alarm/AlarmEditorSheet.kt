@@ -218,7 +218,8 @@ fun AlarmEditorSheet(
                     val time = LocalTime.of(picker.hour, picker.minute)
                     val onceAt = alarm.onceAtMillis?.let {
                         val original = Instant.ofEpochMilli(it).atZone(now.zone)
-                        if (original.toLocalTime() == time) it else original.toLocalDate().atTime(time)
+                        if (original.hour == time.hour && original.minute == time.minute) it
+                        else original.toLocalDate().atTime(time)
                             .atZone(now.zone).toInstant().toEpochMilli()
                     }
                     if (onceAt != null && onceAt <= now.toInstant().toEpochMilli()) {

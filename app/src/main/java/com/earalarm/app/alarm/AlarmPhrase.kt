@@ -4,7 +4,6 @@ import com.earalarm.app.data.model.RepeatDays
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
 
 internal data class AlarmPhrase(val time: LocalTime, val repeatDays: RepeatDays, val onceAtMillis: Long? = null)
 
@@ -21,9 +20,7 @@ internal fun parseAlarmPhrase(input: String, now: ZonedDateTime): AlarmPhrase {
     relativeTime.matchEntire(text)?.destructured?.let { (hours, minutes) ->
         val duration = (hours.toIntOrNull() ?: 0) * 60L + (minutes.toIntOrNull() ?: 0)
         require(duration in 1..10_080) { "1분부터 7일 이내로 입력해 줘." }
-        val target = now.plusMinutes(duration)
-        val minute = target.truncatedTo(ChronoUnit.MINUTES)
-        return onceAt(if (target == minute) minute else minute.plusMinutes(1))
+        return onceAt(now.plusMinutes(duration))
     }
 
     val prefix = dayPrefix.find(text)
