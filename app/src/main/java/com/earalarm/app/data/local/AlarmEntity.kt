@@ -23,6 +23,8 @@ data class AlarmEntity(
     /** 0~100. null이면 기본 음량 */
     val volumePercent: Int? = null,
     val createdAt: Long = System.currentTimeMillis(),
+    /** 문장으로 날짜나 상대 시간을 지정한 일회성 알람의 예약 시각 */
+    val onceAtMillis: Long? = null,
 )
 
 /** Room이 컬럼으로 오인하지 않도록 엔티티 밖의 확장 프로퍼티로 둔다. */

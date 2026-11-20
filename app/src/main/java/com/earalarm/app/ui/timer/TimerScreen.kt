@@ -1,5 +1,10 @@
 package com.earalarm.app.ui.timer
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.SystemClock
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.earalarm.app.appContainer
 import com.earalarm.app.audio.EarphoneState
 import com.earalarm.app.data.model.AlarmSettings
@@ -40,27 +46,46 @@ import com.earalarm.app.ui.components.splitTime
 import com.earalarm.app.ui.theme.AppIcons
 import com.earalarm.app.ui.theme.EarAlarmColors
 import kotlinx.coroutines.delay
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 
 @Composable
 fun TimerScreen(earphone: EarphoneState, settings: AlarmSettings, run: (suspend () -> Unit) -> Unit) {
-    val app = LocalContext.current.appContainer
+    val context = LocalContext.current
+    val app = context.appContainer
     val scheduler = app.scheduler
     val haptic = LocalHapticFeedback.current
     // -1: 저장된 마지막 시간을 아직 읽지 않음
     var minutes by rememberSaveable { mutableIntStateOf(-1) }
     LaunchedEffect(Unit) { if (minutes < 0) minutes = app.settingsRepository.current().timerMinutes }
     var timer by remember { mutableStateOf(scheduler.timerState()) }
-    val (remaining, running, total) = timer
-    var now by remember { mutableStateOf(LocalTime.now()) }
+    val (remaining, total, deadline) = timer
+    val running = timer.running
+    var now by remember { mutableStateOf(Instant.now()) }
+    var clockRevision by remember { mutableIntStateOf(0) }
+    DisposableEffect(context) {
+        val clockChanges = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) { clockRevision++ }
+        }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+        }
+        ContextCompat.registerReceiver(context, clockChanges, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        onDispose { context.unregisterReceiver(clockChanges) }
+    }
+    val scheduledFinish = remember(deadline, clockRevision) {
+        deadline?.let { finishInstant(Instant.now(), SystemClock.elapsedRealtime(), it) }
+    }
     LaunchedEffect(Unit) {
         while (true) {
             timer = scheduler.timerState()
-            now = LocalTime.now()
+            now = Instant.now()
             delay(200)
         }
     }
-    val active = remaining > 0
+    val active = running || remaining > 0
     val shown = minutes.coerceAtLeast(0)
     var typing by remember { mutableStateOf(false) }
     fun add(delta: Int) {
@@ -72,9 +97,10 @@ fun TimerScreen(earphone: EarphoneState, settings: AlarmSettings, run: (suspend 
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             val diameter = min(min(maxWidth - 56.dp, maxHeight - 32.dp), 400.dp).coerceAtLeast(160.dp)
             val progress = if (active && total > 0) remaining.toFloat() / total else 1f
-            val seconds = if (active) (remaining + 999) / 1000 else shown * 60L
+            val end = scheduledFinish ?: now.plusMillis(if (active) remaining else shown * 60_000L)
+            val localEnd = end.atZone(ZoneId.systemDefault()).toLocalTime()
             TimerRing(diameter, progress, dimTrack = active, onClick = if (active) null else ({ typing = true })) {
-                TimerCenter(diameter, active, running, remaining, shown, now.plusSeconds(seconds), earphone, settings)
+                TimerCenter(diameter, active, running, remaining, shown, localEnd, earphone, settings)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -146,7 +172,7 @@ private fun TimerCenter(diameter: Dp, active: Boolean, running: Boolean, remaini
         }
         Spacer(Modifier.height(6.dp))
         val connected = earphone is EarphoneState.Connected
-        val (time, period) = splitTime(end, settings.use24Hour, seconds = true)
+        val (time, period) = splitTime(end, settings.use24Hour, seconds = running)
         val alpha = if (active && !running) 0.45f else 1f
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -197,3 +223,8 @@ private fun MinutesDialog(initial: Int, onDismiss: () -> Unit, onConfirm: (Int) 
         dismissButton = { TextButton(onClick = onDismiss) { Text("취소", color = EarAlarmColors.TextMuted) } },
     )
 }
+
+
+/** Convert the scheduled elapsed-time deadline to wall time without rounding the remaining duration. */
+internal fun finishInstant(now: Instant, elapsedRealtime: Long, deadline: Long): Instant =
+    now.plusMillis(deadline - elapsedRealtime)

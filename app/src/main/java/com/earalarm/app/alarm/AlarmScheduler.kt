@@ -21,7 +21,9 @@ import java.util.UUID
 
 class AlarmScheduler(private val context: Context, private val repository: AlarmRepository) {
     data class Delivery(val id: Long, val scheduleUpdateFailed: Boolean = false)
-    data class TimerState(val remaining: Long, val running: Boolean, val total: Long)
+    data class TimerState(val remaining: Long, val total: Long, val deadlineElapsedRealtime: Long?) {
+        val running: Boolean get() = deadlineElapsedRealtime != null
+    }
 
     // A null token identifies a pending intent created by an older app version.
     private data class Schedule(val at: Long, val token: String?)
@@ -105,14 +107,19 @@ class AlarmScheduler(private val context: Context, private val repository: Alarm
     }
 
     private fun schedule(alarm: AlarmEntity) {
-        val at = nextOccurrence(alarm.hour, alarm.minute, alarm.repeatMask, ZonedDateTime.now())
-            .toInstant().toEpochMilli()
+        val at = alarm.scheduledOccurrence(ZonedDateTime.now()).toInstant().toEpochMilli()
         register("alarm/${alarm.id}", at)
     }
 
     suspend fun save(alarm: AlarmEntity) = mutate {
         require(alarm.hour in 0..23 && alarm.minute in 0..59 && alarm.repeatMask in 0..127)
-        if (alarm.enabled) check(canSchedule()) { "정확한 알람 권한을 먼저 허용해 주세요" }
+        require(alarm.onceAtMillis == null || alarm.repeatMask == 0)
+        if (alarm.enabled) {
+            check(canSchedule()) { "정확한 알람 권한을 먼저 허용해 주세요" }
+            require(alarm.onceAtMillis == null || alarm.onceAtMillis > System.currentTimeMillis()) {
+                "예약 시간이 이미 지났어요. 알람을 수정해 새 시간으로 저장해 주세요."
+            }
+        }
         val previous = if (alarm.id == 0L) null else checkNotNull(repository.get(alarm.id)) {
             "이미 삭제된 알람이에요"
         }
@@ -145,11 +152,19 @@ class AlarmScheduler(private val context: Context, private val repository: Alarm
             try {
                 val key = "alarm/${alarm.id}"
                 val previous = read(key)
+                val hasPending = previous != null && operation(key, previous, existingOnly = true) != null
+                if (alarm.onceAtMillis?.let { it <= System.currentTimeMillis() } == true) {
+                    if (afterBoot || reapply || !hasPending) {
+                        cancelKey(key)
+                        repository.setEnabled(alarm.id, false)
+                    }
+                    continue
+                }
                 if (afterBoot || recalculate || previous == null) {
                     schedule(alarm)
                 } else if (reapply && previous.at > System.currentTimeMillis()) {
                     scheduleOperation(key, previous, checkNotNull(operation(key, previous)))
-                } else if (operation(key, previous, existingOnly = true) == null) {
+                } else if (!hasPending) {
                     schedule(alarm)
                 }
             } catch (e: Exception) {
@@ -164,7 +179,7 @@ class AlarmScheduler(private val context: Context, private val repository: Alarm
         val at = values[TIMER] as? Long
         val remaining = if (at != null) (at - SystemClock.elapsedRealtime()).coerceAtLeast(0)
             else (values["timerPaused"] as? Long ?: 0L)
-        return TimerState(remaining, at != null, maxOf(values["timerTotal"] as? Long ?: 0L, remaining))
+        return TimerState(remaining, maxOf(values["timerTotal"] as? Long ?: 0L, remaining), at)
     }
 
     suspend fun startTimer(duration: Long) = mutate {

@@ -18,7 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.earalarm.app.alarm.nextOccurrence
+import com.earalarm.app.alarm.scheduledOccurrence
 import com.earalarm.app.data.local.AlarmEntity
 import com.earalarm.app.data.local.repeatDays
 import com.earalarm.app.data.model.AlarmSettings
@@ -31,6 +31,7 @@ import com.earalarm.app.ui.theme.AppIcons
 import com.earalarm.app.ui.theme.EarAlarmColors
 import kotlinx.coroutines.delay
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -40,20 +41,21 @@ import java.util.Locale
 
 /** "다음 알람 · 내일 오전 6:00 (13시간 18분 후)" */
 private fun nextAlarmSummary(alarm: AlarmEntity, now: ZonedDateTime, use24Hour: Boolean): String {
-    val left = timeUntil(alarm, now)
-    val at = now.plus(left)
+    val at = alarm.scheduledOccurrence(now)
+    val left = Duration.between(now, at).coerceAtLeast(Duration.ZERO)
     val day = when (ChronoUnit.DAYS.between(now.toLocalDate(), at.toLocalDate())) {
         0L -> "오늘"
         1L -> "내일"
-        else -> at.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
+        else -> if (alarm.onceAtMillis != null) at.format(DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN))
+            else at.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.KOREAN)
     }
-    val time = LocalTime.of(alarm.hour, alarm.minute).format(DateTimeFormatter.ofPattern(if (use24Hour) "HH:mm" else "a h:mm", Locale.KOREAN))
+    val time = at.toLocalTime().format(DateTimeFormatter.ofPattern(if (use24Hour) "HH:mm" else "a h:mm", Locale.KOREAN))
     return "다음 알람 · $day $time (${formatDuration(left)} 후)"
 }
 
 /** 다음 울림까지 남은 시간. 스낵바와 목록에서 같이 쓴다. */
 fun timeUntil(alarm: AlarmEntity, now: ZonedDateTime = ZonedDateTime.now()): Duration =
-    Duration.between(now, nextOccurrence(alarm.hour, alarm.minute, alarm.repeatMask, now))
+    Duration.between(now, alarm.scheduledOccurrence(now)).coerceAtLeast(Duration.ZERO)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -113,7 +115,8 @@ fun AlarmListScreen(
 @Composable
 private fun AlarmRow(alarm: AlarmEntity, use24Hour: Boolean, now: ZonedDateTime, modifier: Modifier, onToggle: (Boolean) -> Unit) {
     val context = LocalContext.current
-    val (time, period) = splitTime(LocalTime.of(alarm.hour, alarm.minute), use24Hour)
+    val scheduledTime = alarm.onceAtMillis?.let { Instant.ofEpochMilli(it).atZone(now.zone) }
+    val (time, period) = splitTime(scheduledTime?.toLocalTime() ?: LocalTime.of(alarm.hour, alarm.minute), use24Hour)
     val color = if (alarm.enabled) EarAlarmColors.Text else EarAlarmColors.Text.copy(alpha = 0.55f)
     Row(modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -121,7 +124,9 @@ private fun AlarmRow(alarm: AlarmEntity, use24Hour: Boolean, now: ZonedDateTime,
                 Text(time, Modifier.alignByBaseline(), fontSize = 50.sp, color = color)
                 if (period.isNotEmpty()) Text(" $period", Modifier.alignByBaseline(), fontSize = 30.sp, color = color)
             }
-            val detail = listOfNotNull(alarm.repeatDays.summary(context.resources), alarm.label.takeIf { it.isNotBlank() }).joinToString(" · ")
+            val frequency = scheduledTime?.format(DateTimeFormatter.ofPattern("M월 d일 (E)", Locale.KOREAN))
+                ?: alarm.repeatDays.summary(context.resources)
+            val detail = listOfNotNull(frequency, alarm.label.takeIf { it.isNotBlank() }).joinToString(" · ")
             Text(detail, color = EarAlarmColors.TextMuted, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (alarm.enabled) Text("${formatDuration(timeUntil(alarm, now))} 후", color = EarAlarmColors.TealBright, fontSize = 14.sp)
         }
