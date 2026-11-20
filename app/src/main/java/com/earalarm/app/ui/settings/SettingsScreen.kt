@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationManagerCompat
@@ -229,13 +228,8 @@ fun SettingsScreen(
                         "앱을 닫아도 예약된 시간에 울려요. 기기를 재부팅하면 진행 중이던 타이머는 초기화돼요.",
                     ).forEach { Text("• $it", color = EarAlarmColors.TextMuted, fontSize = 14.sp) }
                 }
-                Text(
-                    "이어폰 알람 ${packageInfo.versionName} (${packageInfo.longVersionCode})",
-                    Modifier.fillMaxWidth().padding(top = 24.dp),
-                    color = EarAlarmColors.TextMuted,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                )
+                SectionTitle("앱 업데이트")
+                AppUpdateSection(packageInfo.versionName.orEmpty(), packageInfo.longVersionCode)
                 Spacer(Modifier.height(32.dp))
             }
         }

@@ -8,6 +8,10 @@ Kotlin + Jetpack Compose Android 앱. `quizquiz/earphone-alarm/`의 Phase 1에�
 - 모든 버전: https://github.com/ggumtak/earphonealarm/releases
 - 1.2 버전부터 임시 디버그 서명키 대신 고정 서명키를 씁니다. 1.1.x가 설치되어 있으면 한 번만 삭제한 뒤 설치하세요. 이후 업데이트는 기존 설치 위에 설치됩니다(아래 고정 서명키 참고).
 
+## 앱에서 업데이트
+
+v1.3부터 **설정 → 앱 업데이트**에서 GitHub Releases의 새 버전을 확인하고 설치합니다. 처음에는 Android에서 이 앱의 설치 권한을 허용하고, 설치 화면에서 업데이트를 확인합니다. 기존 설치와 같은 고정 서명키를 사용한 APK만 업데이트할 수 있습니다. 이전 버전에는 이 메뉴가 없어서 v1.3 APK를 한 번 직접 설치해야 합니다.
+
 ## 구현한 기능
 
 - 알람 추가·수정·삭제·활성화, 한 번/반복 요일, 메모, 개별 알람음·음량
@@ -37,7 +41,7 @@ JDK 17, Android SDK 36, Gradle 8.11.1, AGP 8.10.1을 사용합니다.
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`. Android Studio에서는 저장소 루트를 엽니다.
 GitHub Actions의 **Android APK** 워크플로는 테스트·Lint·APK 생성을 수행하고 APK를 아티팩트로 보관합니다.
-디버그 APK는 개인 테스트용입니다. 고정 서명키(`SIGNING_PASSWORD`)가 없으면 CI는 임시 디버그 키로 서명해 기존 설치 위 업데이트가 안 될 수 있습니다.
+디버그 APK는 개인 테스트용입니다. CI 디버그 APK는 임시 키로 서명합니다. GitHub Releases에는 고정 서명키(`SIGNING_PASSWORD`)로 서명한 APK만 게시합니다.
 
 ### 고정 서명키
 
