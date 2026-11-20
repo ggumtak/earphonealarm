@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import com.earalarm.app.appContainer
 import com.earalarm.app.audio.EarphoneState
 import com.earalarm.app.data.model.AlarmSettings
-import com.earalarm.app.data.model.NoEarphoneAction
 import com.earalarm.app.data.settings.MAX_TIMER_MINUTES
 import com.earalarm.app.ui.components.CircleButton
 import com.earalarm.app.ui.components.splitTime
@@ -51,13 +50,12 @@ fun TimerScreen(earphone: EarphoneState, settings: AlarmSettings, run: (suspend 
     // -1: 저장된 마지막 시간을 아직 읽지 않음
     var minutes by rememberSaveable { mutableIntStateOf(-1) }
     LaunchedEffect(Unit) { if (minutes < 0) minutes = app.settingsRepository.current().timerMinutes }
-    var remaining by remember { mutableLongStateOf(scheduler.timerRemaining()) }
-    var total by remember { mutableLongStateOf(scheduler.timerTotal()) }
-    var running by remember { mutableStateOf(scheduler.timerRunning()) }
+    var timer by remember { mutableStateOf(scheduler.timerState()) }
+    val (remaining, running, total) = timer
     var now by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
-            remaining = scheduler.timerRemaining(); total = scheduler.timerTotal(); running = scheduler.timerRunning()
+            timer = scheduler.timerState()
             now = LocalTime.now()
             delay(200)
         }
@@ -152,11 +150,7 @@ private fun TimerCenter(diameter: Dp, active: Boolean, running: Boolean, remaini
         val alpha = if (active && !running) 0.45f else 1f
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                when {
-                    connected -> AppIcons.Headphones
-                    settings.noEarphoneAction == NoEarphoneAction.SPEAKER -> AppIcons.Speaker
-                    else -> AppIcons.SpeakerOff
-                },
+                if (connected) AppIcons.Headphones else AppIcons.SpeakerOff,
                 contentDescription = if (connected) "이어폰으로 울림" else "이어폰 없음",
                 Modifier.size(with(LocalDensity.current) { (unit * 0.085f).toDp() }),
                 tint = (if (connected) EarAlarmColors.Text else EarAlarmColors.DisconnectedContent).copy(alpha = alpha),

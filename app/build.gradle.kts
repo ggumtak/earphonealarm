@@ -20,15 +20,15 @@ val signingPassword: String? =
 
 android {
     namespace = "com.earalarm.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.earalarm.app"
         minSdk = 28
         targetSdk = 35
         // 예전 1.0.x(실행 번호 기반) 빌드의 versionCode보다 커야 업데이트되므로 10으로 건너뛰었다. 이후 푸시마다 +1.
-        versionCode = 11
-        versionName = "1.2"
+        versionCode = 12
+        versionName = "1.2.1"
     }
 
     signingConfigs {

@@ -22,7 +22,8 @@
     <!-- 재부팅 후 알람 다시 등록 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- 블루투스 이어폰 이름 확인 (Android 12+) -->
+    <!-- 클래식 블루투스 이어폰과 스피커를 구분하기 위한 기기 유형 확인 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- 배터리 최적화 제외 요청 -->

@@ -1,6 +1,5 @@
 package com.earalarm.app.ui.ringing
 
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -21,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.earalarm.app.appContainer
 import com.earalarm.app.data.model.AlarmSettings
 import com.earalarm.app.service.AlarmForegroundService
+import com.earalarm.app.service.RingingAlarm
 import com.earalarm.app.ui.components.splitTime
 import com.earalarm.app.ui.theme.AppIcons
 import com.earalarm.app.ui.theme.EarAlarmColors
@@ -39,12 +39,12 @@ class AlarmRingingActivity : ComponentActivity() {
             val settings by appContainer.settingsRepository.settings.collectAsStateWithLifecycle(AlarmSettings())
             LaunchedEffect(active) { if (active == null) finish() }
             var label by remember { mutableStateOf("알람") }
-            LaunchedEffect(active) { label = if (active == 0L) "타이머가 끝났습니다" else active?.let { appContainer.alarmRepository.get(it)?.label?.takeIf(String::isNotBlank) } ?: "알람" }
+            LaunchedEffect(active) { label = if (active?.id == 0L) "타이머가 끝났습니다" else active?.let { appContainer.alarmRepository.get(it.id)?.label?.takeIf(String::isNotBlank) } ?: "알람" }
             val now by produceState(LocalTime.now()) { while (true) { delay(1000); value = LocalTime.now() } }
             Surface(Modifier.fillMaxSize(), color = EarAlarmColors.Background) {
                 Column(Modifier.fillMaxSize().systemBarsPadding().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(Modifier.weight(1f))
-                    Icon(if (active == 0L) AppIcons.Hourglass else AppIcons.Alarm, null, Modifier.size(56.dp), tint = EarAlarmColors.TealBright)
+                    Icon(if (active?.id == 0L) AppIcons.Hourglass else AppIcons.Alarm, null, Modifier.size(56.dp), tint = EarAlarmColors.TealBright)
                     Spacer(Modifier.height(24.dp))
                     val (time, period) = splitTime(now, settings.use24Hour)
                     Row {
@@ -75,8 +75,8 @@ class AlarmRingingActivity : ComponentActivity() {
             }
         } }
     }
-    private fun command(action: String, id: Long?) {
-        if (id != null) startService(Intent(this, AlarmForegroundService::class.java).setAction(action).putExtra("id", id))
+    private fun command(action: String, alarm: RingingAlarm?) {
+        if (alarm != null) startService(AlarmForegroundService.controlIntent(this, action, alarm))
         finish()
     }
 }

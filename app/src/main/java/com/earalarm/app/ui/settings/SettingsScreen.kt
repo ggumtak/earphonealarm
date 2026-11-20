@@ -134,6 +134,7 @@ fun SettingsScreen(
         if (!granted) openNotificationSettings(context) else refresh++
     }
     val bluetoothRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        app.earphoneDetector.refresh()
         if (!granted) openAppSettings(context) else refresh++
     }
 
@@ -210,7 +211,7 @@ fun SettingsScreen(
                 if (Build.VERSION.SDK_INT >= 34) PermissionRow("잠금 화면 알람", "잠긴 화면 위로 알람 화면을 띄워요", status.fullScreen) {
                     context.startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}")))
                 }
-                if (Build.VERSION.SDK_INT >= 31) PermissionRow("블루투스 이름 표시", "연결된 이어폰 이름을 보여 줘요 (선택)", status.bluetooth) {
+                if (Build.VERSION.SDK_INT >= 31) PermissionRow("블루투스 이어폰 확인", "이어폰과 스피커를 구분하는 데 필요해요", status.bluetooth) {
                     bluetoothRequest.launch(Manifest.permission.BLUETOOTH_CONNECT)
                 }
                 PermissionRow("배터리 최적화 제외", "절전 중에도 알람이 끊기지 않게 해요", status.battery) {
@@ -223,8 +224,8 @@ fun SettingsScreen(
                 Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(
                         "이어폰 소리는 휴대폰 미디어 음량의 영향을 받아요. 미디어 음량이 0이면 소리가 나지 않아요.",
-                        "블루투스 스피커·차량 오디오·일부 USB 장치도 이어폰으로 인식돼요. 처음에는 짧은 타이머로 확인해 주세요.",
-                        "이어폰이 빠지면 재생을 멈추지만, 기기별 오디오 전환 지연으로 아주 짧은 스피커 출력까지 막을 수는 없어요.",
+                        "유선 헤드폰, USB 헤드셋, 이어폰으로 식별되는 블루투스 장치에서 소리가 나요.",
+                        "블루투스 이어폰을 귀에서 빼도 연결이 유지될 수 있어요. 기기가 연결 해제나 출력 변경을 알리면 소리를 멈춰요.",
                         "앱을 닫아도 예약된 시간에 울려요. 기기를 재부팅하면 진행 중이던 타이머는 초기화돼요.",
                     ).forEach { Text("• $it", color = EarAlarmColors.TextMuted, fontSize = 14.sp) }
                 }
