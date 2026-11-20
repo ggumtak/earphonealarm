@@ -14,9 +14,14 @@ class AlarmReceiver : BroadcastReceiver() {
         val pending = goAsync()
         context.appContainer.appScope.launch {
             try {
-                val id = context.appContainer.scheduler.consume(key, intent.getLongExtra("at", 0)) ?: return@launch
+                val delivery = context.appContainer.scheduler.consume(
+                    key, intent.getLongExtra("at", 0), intent.data?.getQueryParameter("token"),
+                ) ?: return@launch
+                if (delivery.scheduleUpdateFailed) {
+                    AlarmForegroundService.reportFailure(context, "다음 알람 예약을 갱신하지 못했어요. 앱을 열어 확인해 주세요.")
+                }
                 ContextCompat.startForegroundService(context, Intent(context, AlarmForegroundService::class.java)
-                    .setAction(AlarmForegroundService.RING).putExtra("id", id))
+                    .setAction(AlarmForegroundService.RING).putExtra("id", delivery.id))
             } catch (e: Exception) {
                 AlarmForegroundService.reportFailure(context, "알람을 시작하지 못했어요. 앱에서 권한을 확인해 주세요.")
             } finally { pending.finish() }

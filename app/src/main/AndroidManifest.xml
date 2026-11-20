@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- 정확한 알람: Android 12(32) 이하는 SCHEDULE_EXACT_ALARM, 13 이상은 설치 즉시 허용되는 USE_EXACT_ALARM 사용.
          핵심 기능이 알람인 앱에 USE_EXACT_ALARM을 사용한다. 배포 시 스토어 정책을 별도로 확인한다. -->
     <uses-permission
@@ -22,7 +24,8 @@
     <!-- 재부팅 후 알람 다시 등록 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- 블루투스 이어폰 이름 확인 (Android 12+) -->
+    <!-- 클래식 블루투스 이어폰과 스피커를 구분하기 위한 기기 유형 확인 -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- 배터리 최적화 제외 요청 -->

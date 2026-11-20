@@ -124,11 +124,10 @@ private fun Home() {
                     }
                 }
                 Tabs(pager) { page -> scope.launch { pager.animateScrollToPage(page) } }
-                active?.let { id ->
+                active?.let { current ->
                     Banner("알람이 울리고 있어요", EarAlarmColors.ConnectedContainer, EarAlarmColors.ConnectedContent) {
-                        TextButton(onClick = { context.startService(Intent(context, AlarmForegroundService::class.java)
-                            .setAction(AlarmForegroundService.STOP).putExtra("id", id)) }) { Text("끄기", color = EarAlarmColors.Text) }
-                        TextButton(onClick = { context.startActivity(Intent(context, AlarmRingingActivity::class.java).putExtra("id", id)) }) {
+                        TextButton(onClick = { context.startService(AlarmForegroundService.controlIntent(context, AlarmForegroundService.STOP, current)) }) { Text("끄기", color = EarAlarmColors.Text) }
+                        TextButton(onClick = { context.startActivity(Intent(context, AlarmRingingActivity::class.java)) }) {
                             Text("열기", color = EarAlarmColors.TealBright)
                         }
                     }

@@ -36,7 +36,6 @@ enum class FadeInDuration(val seconds: Int) {
 enum class NoEarphoneAction(@StringRes val labelRes: Int, @StringRes val descriptionRes: Int?) {
     SILENT_NOTIFICATION(R.string.no_earphone_silent, null),
     VIBRATE_ONLY(R.string.no_earphone_vibrate, R.string.no_earphone_vibrate_desc),
-    SPEAKER(R.string.no_earphone_speaker, null),
 }
 
 /** [설정] 탭의 전역 설정값 (DataStore에 저장) */

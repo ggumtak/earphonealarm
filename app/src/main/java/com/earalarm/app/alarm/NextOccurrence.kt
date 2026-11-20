@@ -1,5 +1,7 @@
 package com.earalarm.app.alarm
 
+import com.earalarm.app.data.local.AlarmEntity
+import java.time.Instant
 import java.time.ZonedDateTime
 
 /** Calendar alarms follow local wall time; java.time resolves DST gaps and overlaps. */
@@ -13,3 +15,7 @@ fun nextOccurrence(hour: Int, minute: Int, repeatMask: Int, now: ZonedDateTime):
     }
     error("No next occurrence")
 }
+
+
+internal fun AlarmEntity.scheduledOccurrence(now: ZonedDateTime): ZonedDateTime =
+    onceAtMillis?.let { Instant.ofEpochMilli(it).atZone(now.zone) } ?: nextOccurrence(hour, minute, repeatMask, now)

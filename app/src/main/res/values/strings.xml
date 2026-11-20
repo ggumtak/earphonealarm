@@ -79,7 +79,6 @@
     <string name="no_earphone_silent">울리지 않음 (무음 알림만 표시)</string>
     <string name="no_earphone_vibrate">소리 없이 진동만 울리기</string>
     <string name="no_earphone_vibrate_desc">하단 진동 설정이 꺼져 있어도 강제로 진동을 울립니다.</string>
-    <string name="no_earphone_speaker">스피커로 소리 울리기</string>
 
     <string name="vibrate_with_sound">진동 함께 사용</string>
     <string name="vibrate_with_sound_desc">이어폰으로 소리가 날 때 진동도 함께 울립니다</string>

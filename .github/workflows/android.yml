@@ -21,7 +21,7 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-35 build-tools;34.0.0'
+          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
@@ -40,17 +40,14 @@ jobs:
           name: earphonealarm-release-apk
           path: app/build/outputs/apk/release/app-release.apk
       - name: Publish APK to GitHub Releases
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && env.SIGNING_PASSWORD != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
           APK=app/build/outputs/apk/release/app-release.apk
-          if [ ! -f "$APK" ]; then
-            APK=app/build/outputs/apk/debug/app-debug.apk
-            echo "::warning::고정 서명키 없이 디버그 APK로 배포합니다. 서명키가 달라 기존 설치 위에 업데이트되지 않습니다."
-          fi
+          test -f "$APK"
           cp "$APK" earphonealarm.apk
           TAG="v$VERSION"
           NOTES="$(git log -1 --pretty=%s)"
